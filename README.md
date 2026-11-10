@@ -82,7 +82,9 @@ These rules are covered by automated checks (`npm run check`) that try path esca
 
 ## Status
 
-Caret Agent is early. What has been exercised end to end: the editor, file tree, terminal, onboarding, both views, model discovery on a real machine, and the permission and path-safety rules. Signing in to Claude or Codex, Grok/Gemini/OpenAI keys and Antigravity are wired up but depend on your own accounts; expect rough edges and please open an issue when you find one.
+Caret Agent is early. What has been exercised end to end: the editor, file tree, terminal, onboarding, both views, model discovery on a real machine, the permission and path-safety rules, and a full agent run with a local model (Ollama, `qwen3:8b`) that wrote a page with a logo and updated the shared project note.
+
+Wired up but **not yet tested end to end**: Claude Code and Codex through their CLIs, Grok / Gemini / OpenAI with API keys, LM Studio and llama.cpp, and the approval prompts for Claude. Antigravity is not connected yet. Local models on modest hardware can be slow — the run above took about six minutes on an 8B model. Expect rough edges and please open an issue when you find one.
 
 Windows is the main target today. macOS and Linux code paths exist but have had less testing.
 
