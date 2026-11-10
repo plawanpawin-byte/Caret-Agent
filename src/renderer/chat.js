@@ -31,21 +31,26 @@ export function createChat() {
   const textarea = h('textarea', { rows: 1, placeholder: 'Ask anything (Ctrl+L), @ to mention' });
   const attachEl = h('div', { class: 'attachments' });
   const fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hidden' });
-  const modeBtn = h('button', { class: 'pill', title: 'Mode (Shift+Tab)' });
   const permBtn = h('button', { class: 'pill', title: 'Permissions' });
   const modelBtn = h('button', { class: 'pill model', title: 'Model' });
-  const sendBtn = h('button', { class: 'submit', title: 'Send (Enter)' });
+  const ctxBtn = h('button', { class: 'pill toggle', title: 'Let the AI search the whole project for context' }, icon('layers'), h('span', { text: 'Codebase' }));
+  const planBtn = h('button', { class: 'pill toggle', title: 'Plan only: read the project and write a plan, change nothing (Shift+Tab)' }, icon('plan'), h('span', { text: 'Plan' }));
+  const sendBtn = h('button', { class: 'send', title: 'Send (Enter)' });
   const plusBtn = h('button', { class: 'ctx-plus', title: 'Add context' }, icon('plus'));
   const composer = h('div', { class: 'composer' }, attachEl, textarea,
-    h('div', { class: 'composer-row' }, modeBtn, modelBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
+    h('div', { class: 'composer-row' }, modelBtn, ctxBtn, planBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
   const composerWrap = h('div', { class: 'composer-wrap' }, composer);
-  // panel header: title + new / history / expand, like early Cursor
-  const subHead = h('div', { class: 'chat-head' },
-    h('span', { class: 'grow', text: 'Chat' }),
+  // panel header: two tabs (Chat = edits you ask for, Composer = works on its own) + actions on the right
+  const tabChat = h('button', { class: 'htab', onclick: () => setTab('code') }, 'Chat');
+  const tabComposer = h('button', { class: 'htab', onclick: () => setTab('agent') }, 'Composer');
+  const subHead = h('div', { class: 'chat-head' }, tabChat, tabComposer, h('span', { class: 'grow' }),
     h('button', { class: 'icon-btn', title: 'New chat (Ctrl+T)', onclick: () => newChat() }, icon('plus')),
     h('button', { class: 'icon-btn', title: 'Past chats', onclick: e => historyMenu(e.currentTarget) }, icon('history')),
     h('button', { class: 'icon-btn', title: 'Open in Agent view', onclick: () => emit('cmd', { layout: 'agent' }) }, icon('expand')));
-  const el = h('div', { class: 'chat' }, tabStrip, subHead, transcript, welcome, composerWrap);
+  const el = h('div', { class: 'chat' }, subHead, tabStrip, transcript, welcome, composerWrap);
+  let useCodebase = false; try { useCodebase = localStorage.getItem('caret.codebase') === '1'; } catch {}
+  let lastNonPlan = 'code';
+  function setTab(mode) { lastNonPlan = mode; saveSettings({ mode }).then(updateComposer); }
 
   // ---------- tabs ----------
   function loadOpen() { try { return JSON.parse(localStorage.getItem('caret.openChats') || '[]'); } catch { return []; } }
@@ -106,6 +111,7 @@ export function createChat() {
   }
 
   function renderTabs() {
+    tabStrip.classList.toggle('hidden', variant === 'center' || openIds.length < 2);
     tabStrip.replaceChildren(
       ...openIds.map(id => {
         const c = chats.get(id); if (!c) return null;
@@ -244,16 +250,19 @@ export function createChat() {
   }
   const queueRender = () => { if (!renderQueued) { renderQueued = true; setTimeout(renderAll, 60); } };
 
-  // Shown under the prompt box in a fresh chat, like early Cursor.
+  // Shown above the prompt in a fresh chat: collapsible list of earlier chats.
+  let prevOpen = true; try { prevOpen = localStorage.getItem('caret.prevOpen') !== '0'; } catch {}
   function previousChats() {
-    const list = listChats().filter(c => c.id !== activeId && c.title !== 'New chat').slice(0, 6);
+    const all = listChats().filter(c => c.id !== activeId && c.title !== 'New chat');
+    const list = all.slice(0, 8);
     if (!list.length) {
-      return h('div', { class: 'prev' }, h('div', { class: 'prev-head' }, h('span', { text: 'Try asking' })), suggestions());
+      return h('div', { class: 'prev' }, h('div', { class: 'prev-head static' }, h('span', { text: 'Try asking' })), suggestions());
     }
-    return h('div', { class: 'prev' },
-      h('div', { class: 'prev-head' }, h('span', { text: 'Previous chats' }), h('button', { class: 'link', text: 'View all', onclick: e => historyMenu(e.currentTarget) })),
-      h('div', { class: 'prev-grid' }, ...list.map(c => h('button', { class: 'prev-item', title: c.title, onclick: () => select(c.id) },
-        icon('chat'), h('span', { class: 'prev-title', text: c.title }), h('span', { class: 'prev-time', text: timeAgo(c.updatedAt) })))));
+    const body = h('div', { class: 'prev-list' + (prevOpen ? '' : ' hidden') }, ...list.map(c => h('button', { class: 'prev-item', title: c.title, onclick: () => select(c.id) },
+      c.running ? h('span', { class: 'busy-dot' }) : icon('chat'), h('span', { class: 'prev-title', text: c.title }), h('span', { class: 'prev-time', text: timeAgo(c.updatedAt) }))));
+    const head = h('button', { class: 'prev-head' + (prevOpen ? '' : ' closed'), onclick: () => { prevOpen = !prevOpen; try { localStorage.setItem('caret.prevOpen', prevOpen ? '1' : '0'); } catch {} head.classList.toggle('closed', !prevOpen); body.classList.toggle('hidden', !prevOpen); } },
+      icon('chevron', 'chev'), h('span', { class: 'grow', text: 'Previous chats' }), h('span', { class: 'count', text: String(all.length) }));
+    return h('div', { class: 'prev' }, head, body);
   }
 
   function suggestions() {
@@ -298,22 +307,28 @@ export function createChat() {
   // ---------- composer ----------
   function updateComposer() {
     const s = state.settings || {};
-    const m = MODES[s.mode] || MODES.code, p = PERMS[s.permission] || PERMS.ask;
-    modeBtn.className = 'pill mode-' + (s.mode || 'code');
-    modeBtn.replaceChildren(icon(m.icon), h('span', { text: m.label }), icon('down', 'caret-down'));
+    const p = PERMS[s.permission] || PERMS.ask;
+    const mode = s.mode || 'code';
+    if (mode !== 'plan') lastNonPlan = mode;
+    tabChat.classList.toggle('on', mode !== 'agent');
+    tabComposer.classList.toggle('on', mode === 'agent');
+    planBtn.classList.toggle('on', mode === 'plan');
+    ctxBtn.classList.toggle('on', useCodebase);
     permBtn.className = 'pill perm-' + (s.permission || 'ask');
     permBtn.replaceChildren(icon(p.icon), h('span', { text: p.label }), icon('down', 'caret-down'));
     modelBtn.replaceChildren(icon(s.model && s.model !== 'auto' && /^(ollama|lmstudio|llamacpp):/.test(s.model) ? 'cpu' : s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
       h('span', { text: s.model && s.model !== 'auto' ? modelLabel(s.model) : 'Auto' }), icon('down', 'caret-down'));
     const c = chats.get(activeId);
     const busy = !!c?.running;
-    sendBtn.className = 'submit' + (busy ? ' stop' : '');
-    sendBtn.replaceChildren(h('span', { text: busy ? 'stop' : 'submit' }), h('span', { class: 'enter', text: busy ? '■' : '↵' }));
+    sendBtn.className = 'send' + (busy ? ' stop' : '');
+    sendBtn.replaceChildren(busy ? icon('stop') : icon('arrowUp'));
     sendBtn.title = busy ? 'Stop' : 'Send (Enter)';
     sendBtn.disabled = !busy && !textarea.value.trim() && !attachments.length;
   }
 
-  modeBtn.onclick = () => menu(modeBtn, Object.entries(MODES).map(([k, v]) => ({ label: v.label, sub: v.sub, icon: v.icon, checked: state.settings.mode === k, onClick: async () => { await saveSettings({ mode: k }); updateComposer(); } })), { above: true });
+  planBtn.onclick = () => setTabMode(state.settings.mode === 'plan' ? lastNonPlan : 'plan');
+  ctxBtn.onclick = () => { useCodebase = !useCodebase; try { localStorage.setItem('caret.codebase', useCodebase ? '1' : '0'); } catch {} updateComposer(); };
+  function setTabMode(m) { saveSettings({ mode: m }).then(updateComposer); }
   permBtn.onclick = () => menu(permBtn, Object.entries(PERMS).map(([k, v]) => ({ label: v.label, sub: v.sub, icon: v.icon, checked: state.settings.permission === k, onClick: async () => { await saveSettings({ permission: k }); updateComposer(); } })), { above: true });
   modelBtn.onclick = async () => {
     const loading = menu(modelBtn, [{ note: 'Looking for models…' }], { above: true, align: 'right' });
@@ -361,8 +376,7 @@ export function createChat() {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
     if (e.key === 'Tab' && e.shiftKey) {
       e.preventDefault();
-      const order = ['plan', 'code', 'agent'];
-      saveSettings({ mode: order[(order.indexOf(state.settings.mode) + 1) % 3] }).then(updateComposer);
+      setTabMode(state.settings.mode === 'plan' ? lastNonPlan : 'plan');
     }
   });
   sendBtn.onclick = () => { const c = chats.get(activeId); if (c?.running) api.agent.stop(activeId); else submit(); };
@@ -436,7 +450,8 @@ export function createChat() {
     const auto = autoFile();
     if (auto) files.unshift(auto);
     const images = attachments.filter(a => a.kind === 'image');
-    const full = files.length ? `${text}\n\n(Files I mean: ${files.join(', ')})` : text;
+    let full = files.length ? `${text}\n\n(Files I mean: ${files.join(', ')})` : text;
+    if (useCodebase) full += '\n\n(Use the whole codebase as context: search and read the relevant files before answering.)';
     c._pendingThumbs = images.map(i => i.dataUrl);
     textarea.value = ''; attachments = []; drafts.delete(activeId); renderAttachments(); autosize();
     c.running = true; updateComposer();
@@ -461,10 +476,9 @@ export function createChat() {
 
   function setVariant(v) {
     variant = v;
-    tabStrip.classList.toggle('hidden', v === 'center');
     subHead.classList.toggle('hidden', v === 'center');
     if (v === 'center') el.classList.remove('empty-chat');
-    renderAll();
+    renderTabs(); renderAll();
   }
 
   init();

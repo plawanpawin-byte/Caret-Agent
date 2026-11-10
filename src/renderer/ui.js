@@ -60,6 +60,8 @@ const P = {
   sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  arrowUp: '<path d="M12 19V6M6 12l6-6 6 6"/>',
   link: '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
 };
 
@@ -176,5 +178,7 @@ export function fileBadge(name) {
   const ext = (name.toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1] || (name.startsWith('.') ? name.slice(1).toLowerCase() : '');
   const [t, c] = FT[ext] || ['', '#77777f'];
   if (!t) return icon('files');
-  return h('span', { class: 'ficon', style: { color: c }, text: t });
+  const b = h('span', { class: 'ficon', text: t });
+  b.style.setProperty('--c', c); // custom properties need setProperty
+  return b;
 }
