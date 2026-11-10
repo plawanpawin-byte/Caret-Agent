@@ -490,4 +490,17 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .send.stop svg { fill: currentColor; stroke: none; width: 11px; height: 11px; }
 .chat > .transcript { order: 0; }
 
+/* v3: tools live in one row at the top of the side panel; no left rail */
+.toolrow { display: flex; align-items: center; gap: 2px; height: 38px; padding: 0 8px; flex: none; border-bottom: 1px solid var(--border); }
+.toolrow .grow { flex: 1; }
+.toolrow .icon-btn { width: 32px; height: 28px; border-radius: 6px; color: #8c8c8c; position: relative; }
+.toolrow .icon-btn svg { width: 18px; height: 18px; stroke-width: 1.7; }
+.toolrow .icon-btn:hover { background: var(--hover); color: #fff; }
+.toolrow .icon-btn.on { color: #fff; background: var(--surface-2); }
+.toolrow .icon-btn.on::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -5px; height: 2px; background: var(--accent); border-radius: 2px; }
+.sessions .toolrow { margin: -8px -6px 6px; }
+.logo { border-radius: 5px; display: block; }
+.watermark .mark { opacity: .16; filter: none; border-radius: 24px; }
+.welcome-mini .logo { opacity: .6; filter: none; }
 @media (max-width: 1100px) { .chatpane { width: 340px; } .sidebar { width: 220px; } .filespane { display: none; } .omnibox { display: none; } }
+.titlebar .brand .logo { border: 1px solid #3a3a3a; border-radius: 6px; }

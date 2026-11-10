@@ -74,12 +74,10 @@ export function icon(name, cls = '') {
 }
 
 export function logo(size = 20) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 32 32');
-  svg.setAttribute('width', size); svg.setAttribute('height', size);
-  svg.setAttribute('class', 'logo');
-  svg.innerHTML = '<rect width="32" height="32" rx="8" fill="#f0a63a"/><path d="M9.5 20.5 16 10l6.5 10.5" fill="none" stroke="#1a1408" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 24.5h8" stroke="#1a1408" stroke-width="3.2" stroke-linecap="round"/>';
-  return svg;
+  const img = document.createElement('img');
+  img.src = 'logo.png'; img.alt = ''; img.width = size; img.height = size;
+  img.className = 'logo'; img.draggable = false;
+  return img;
 }
 
 // ---------- popover menu ----------

@@ -23,7 +23,7 @@ async function boot() {
   // ---------- title bar ----------
   const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
   $('titlebar').append(
-    h('div', { class: 'brand', title: 'Caret Agent' }, logo(18)),
+    h('div', { class: 'brand', title: 'Caret Agent' }, logo(22)),
     omni, h('div', { class: 'spacer' }),
     h('div', { class: 'tools' },
       h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
@@ -46,21 +46,23 @@ async function boot() {
     explorer: h('button', { class: 'icon-btn on', title: 'Explorer (Ctrl+Shift+E)', onclick: () => goSide('explorer') }, icon('files')),
     search: h('button', { class: 'icon-btn', title: 'Search (Ctrl+Shift+F)', onclick: () => goSide('search') }, icon('search')),
   };
-  function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which); }
-  const actChat = h('button', { class: 'icon-btn', title: 'AI chat (Ctrl+L)', onclick: () => { setLayout('studio'); showPane('chatpane', true); chat.focus(); } }, icon('chat'));
-  const actAgent = h('button', { class: 'icon-btn', title: 'Agent view — chat first', onclick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') }, icon('agent'));
-  $('activity').append(activityItems.explorer, activityItems.search, actChat,
-    h('div', { class: 'sep' }), actAgent,
-    h('div', { class: 'grow' }),
-    h('button', { class: 'icon-btn', title: 'Project memory (.caret/HANDOFF.md)', onclick: () => state.workspace ? emit('open-file-studio', '.caret/HANDOFF.md') : toast('Open a folder first') }, icon('book')),
-    h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings')));
-  $('sidebar').append(explorer.el, search.el);
+  function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which, true); }
+  const actAgent = h('button', { class: 'icon-btn', title: 'Agent view (chat first)', onclick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') }, icon('agent'));
+  const actMore = h('button', { class: 'icon-btn', title: 'More', onclick: () => menu(actMore, [
+    { label: 'Project memory', sub: '.caret/HANDOFF.md', icon: 'book', onClick: () => state.workspace ? emit('open-file-studio', '.caret/HANDOFF.md') : toast('Open a folder first') },
+    { label: 'Open Folder…', icon: 'folderOpen', onClick: () => emit('cmd', 'open-folder') },
+    { label: 'Clone Repository…', icon: 'git', onClick: () => cloneDialog() },
+    'sep',
+    { label: 'Settings', icon: 'settings', sub: 'Ctrl+,', onClick: () => openSettings() },
+  ]) }, icon('down'));
+  // One row of tools at the top of the side panel (no separate left rail).
+  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, actAgent, h('span', { class: 'grow' }), actMore);
+  $('sidebar').append(toolRow, explorer.el, search.el);
   $('editor-area').append(editorArea.el);
   $('bottom').append(terminal.el);
 
   function showSide(which, force) {
     const sb = $('sidebar');
-    if (!force && activityItems[which].classList.contains('on') && !sb.classList.contains('hidden')) { showPane('sidebar', false); return; }
     showPane('sidebar', true);
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', k === which);
     explorer.el.classList.toggle('hidden', which !== 'explorer');
@@ -75,7 +77,6 @@ async function boot() {
     h('button', { class: 'nav-item', onclick: () => chat.newChat() }, icon('plus'), h('span', { class: 'grow', text: 'New chat' }), h('span', { class: 'kbd', text: 'Ctrl T' })),
     h('button', { class: 'nav-item', onclick: () => folderMenu(document.activeElement) }, icon('folder'), h('span', { class: 'grow', id: 'agent-folder', text: 'No folder' })),
     h('button', { class: 'nav-item', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { class: 'grow', text: 'Terminal' })),
-    h('button', { class: 'nav-item', onclick: () => state.workspace ? emit('open-file-studio', '.caret/HANDOFF.md') : toast('Open a folder first') }, icon('book'), h('span', { class: 'grow', text: 'Project memory' })),
     h('div', { class: 'nav-label' }, h('span', { class: 'grow', text: 'Chats' })),
     sessionList);
   $('filespane').append(filesExplorer.el);
@@ -100,9 +101,9 @@ async function boot() {
     $('studio').classList.toggle('hidden', l !== 'studio');
     $('agentview').classList.toggle('hidden', l !== 'agent');
     actAgent.classList.toggle('on', l === 'agent');
-    const sbOpen = !$('sidebar').classList.contains('hidden');
-    if (l === 'agent') for (const b of Object.values(activityItems)) b.classList.remove('on');
-    else if (sbOpen) { const which = search.el.classList.contains('hidden') ? 'explorer' : 'search'; activityItems[which].classList.add('on'); }
+    const which = search.el.classList.contains('hidden') ? 'explorer' : 'search';
+    for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
+    if (l === 'agent') $('sessions').prepend(toolRow); else $('sidebar').prepend(toolRow);
     if (l === 'agent') {
       $('agent-center').append(chat.el, agentTerm);
       chat.setVariant('center');
