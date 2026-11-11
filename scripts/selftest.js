@@ -119,6 +119,19 @@ async function t(name, fn) {
     assert.ok(require('../src/main/cli').resolveNpm(), 'npm should be found on a machine with Node');
   });
 
+  await t('picture preview: stays inside the project, pictures only, size limit', async () => {
+    ws.setRoot(proj);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    fs.writeFileSync(path.join(proj, 'dot.png'), png);
+    fs.writeFileSync(path.join(outside, 'leak.png'), png);
+    const ok = await ws.readImage('dot.png');
+    assert.ok(ok.url.startsWith('data:image/png;base64,')); assert.strictEqual(ok.size, png.length);
+    await assert.rejects(() => ws.readImage('../outside/leak.png'));
+    await assert.rejects(() => ws.readImage(path.join(outside, 'leak.png')));
+    fs.writeFileSync(path.join(proj, 'notes.txt'), 'hi');
+    await assert.rejects(() => ws.readImage('notes.txt'), /not a picture/);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();
