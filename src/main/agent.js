@@ -401,6 +401,14 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         if (readOnly) { const k = sig + '|' + run.files.length; again = repeats.has(k); repeats.set(k, 1); } // a read is a repeat only if nothing changed meanwhile
         else if (isWrite) again = repeats.get('w:' + args.path) === sig;                                      // the last successful write to this file was identical
         const tooMany = isWrite && !again && (repeats.get('n:' + args.path) || 0) >= 5; // a model that keeps rewriting one file is going round in circles
+        // The same command that already failed, unchanged: refuse it so the model has to look at the error instead of looping.
+        const cmdKey = name === 'run_command' ? 'f:' + String(args.command || '').trim() + '|' + run.files.length : null;
+        if (cmdKey && repeats.has(cmdKey)) {
+          result = `This exact command already failed and nothing has changed since. Do not run it again. Read its error output above, find the cause and fix it (or try a different approach), then explain to the user what went wrong.`;
+          on.tool({ id: call.id, status: 'denied', result });
+          messages.push({ role: 'tool', tool_call_id: call.id, name, content: result });
+          continue;
+        }
         if (again || tooMany) {
           result = tooMany
             ? `You have already changed ${args.path} ${repeats.get('n:' + args.path)} times in this run. Stop editing it. Reply with a short summary of what you did and what is left.`
@@ -415,7 +423,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         if (run.stopped) return;
         if (!g.ok) { result = `Not allowed: ${g.message}`; on.tool({ id: call.id, status: 'denied', result: g.message }); }
         else {
-          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); if (isWrite) { repeats.set('w:' + args.path, sig); repeats.set('n:' + args.path, (repeats.get('n:' + args.path) || 0) + 1); } }
+          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); if (cmdKey && failedRun(result)) repeats.set(cmdKey, 1); if (isWrite) { repeats.set('w:' + args.path, sig); repeats.set('n:' + args.path, (repeats.get('n:' + args.path) || 0) + 1); } }
           catch (e) { result = `Error: ${e.message}`; on.tool({ id: call.id, status: 'error', result: e.message }); }
         }
       }
@@ -423,6 +431,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
     }
   }
   on.text(`\n\n_Reached the step limit for ${run.mode} mode. Say "continue" to keep going._`);
+}
+
+// run_command results end with "[exit code N]" (or "[still running …]" for a background server).
+function failedRun(result) {
+  const m = /\[exit code ([^\]]+)\]\s*$/.exec(String(result));
+  return !!m && m[1].trim() !== '0';
 }
 
 function shutdown() { for (const id of running.keys()) stop(id); bridge?.then(b => b.server.close(), () => {}); }
