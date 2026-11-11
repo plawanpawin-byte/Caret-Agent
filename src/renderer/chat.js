@@ -365,7 +365,7 @@ export function createChat() {
         items.push({ label: m.label || m.id, tags, sub: p.kind === 'local' ? (m.why || []).join(' · ') : null, icon: p.kind === 'local' ? 'laptop' : 'cloud', checked: cur === m.key, disabled: false, onClick: () => { if (tooBig) toast(`${m.id} is larger than this computer can run well — it may be very slow.`); pick(m.key); } });
       }
     }
-    items.push('sep', { label: 'Connect Grok, Gemini or ChatGPT…', icon: 'link', onClick: () => emit('cmd', 'settings-models') });
+    items.push('sep', { label: 'Install or connect an AI…', icon: 'extensions', onClick: () => emit('cmd', 'providers') });
     return items;
   }
   async function pick(key) { await saveSettings({ model: key }); updateComposer(); }

@@ -212,6 +212,7 @@ async function boot() {
         else { const show = c === 'show-bottom' ? true : agentTerm.classList.contains('hidden'); agentTerm.classList.toggle('hidden', !show); if (show) agentTerm.append(terminal.el); }
       }
       else if (c === 'settings-models') openSettings('models');
+      else if (c === 'providers') goSide('providers');
       else if (c === 'search') { goSide('search'); }
     } catch (e) { toast(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), { error: true }); }
   });
