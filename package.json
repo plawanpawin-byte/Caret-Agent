@@ -28,7 +28,7 @@
       "package.json"
     ],
     "extraResources": [{ "from": "resources", "to": "resources" }],
-    "win": { "target": "nsis", "icon": "resources/icon.png" },
+    "win": { "target": "nsis", "icon": "resources/icon.ico" },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
   }
 }
