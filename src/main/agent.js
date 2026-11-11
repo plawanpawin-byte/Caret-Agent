@@ -334,7 +334,8 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   let toolsOn = defs.length > 0;
   let saidSomething = false; // has the model written any text during this run?
   let nudged = false;        // we ask a silent model to carry on at most once
-  let badCalls = 0;          // times a model wrote a tool call that could not be parsed
+  const repeats = new Map(); // how often the same call (with the same files changed so far) was made
+  let badCalls = 0;         // times a model wrote a tool call that could not be parsed
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
     compactMessages(messages, budget);
@@ -386,11 +387,29 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         result = `Error: ${name} is not available in ${run.mode} mode.`;
         on.tool({ id: call.id, status: 'denied', result });
       } else {
+        // A small model can get stuck repeating the same call. Answer a repeat without doing it again, and tell it to move on.
+        const readOnly = name === 'read_file' || name === 'list_dir' || name === 'search';
+        const isWrite = name === 'write_file' || name === 'edit_file';
+        const sig = name + '|' + JSON.stringify(args);
+        let again = false;
+        if (readOnly) { const k = sig + '|' + run.files.length; again = repeats.has(k); repeats.set(k, 1); } // a read is a repeat only if nothing changed meanwhile
+        else if (isWrite) again = repeats.get('w:' + args.path) === sig;                                      // the last successful write to this file was identical
+        const tooMany = isWrite && !again && (repeats.get('n:' + args.path) || 0) >= 5; // a model that keeps rewriting one file is going round in circles
+        if (again || tooMany) {
+          result = tooMany
+            ? `You have already changed ${args.path} ${repeats.get('n:' + args.path)} times in this run. Stop editing it. Reply with a short summary of what you did and what is left.`
+            : readOnly
+            ? 'You already did exactly this and nothing has changed since. Use what you already have, and make the change now with edit_file or write_file.'
+            : 'You already made exactly this change; the file is already in that state. Do not repeat it. If the task is done, reply with a short summary.';
+          on.tool({ id: call.id, status: 'done', result });
+          messages.push({ role: 'tool', tool_call_id: call.id, name, content: result });
+          continue;
+        }
         const g = await gate(run, name, args);
         if (run.stopped) return;
         if (!g.ok) { result = `Not allowed: ${g.message}`; on.tool({ id: call.id, status: 'denied', result: g.message }); }
         else {
-          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); }
+          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); if (isWrite) { repeats.set('w:' + args.path, sig); repeats.set('n:' + args.path, (repeats.get('n:' + args.path) || 0) + 1); } }
           catch (e) { result = `Error: ${e.message}`; on.tool({ id: call.id, status: 'error', result: e.message }); }
         }
       }
