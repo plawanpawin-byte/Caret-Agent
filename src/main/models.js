@@ -116,8 +116,8 @@ const guessParams = id => { const m = /(\d+(?:\.\d+)?)b\b/i.exec(id); return m ?
 // ---------- cloud ----------
 const CLOUD_APIS = {
   xai: { name: 'Grok', base: 'https://api.x.ai/v1', filter: id => /grok/i.test(id) && !/image|imagine|vision-beta/i.test(id) },
-  gemini: { name: 'Gemini (Antigravity)', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /gemini/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
-  openai: { name: 'ChatGPT (API)', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
+  gemini: { name: 'Antigravity (Gemini)', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /gemini/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
+  openai: { name: 'ChatGPT', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
 };
 
 async function cloudApiModels(provider) {
@@ -151,18 +151,21 @@ function score(m, hw, mode, needVision) {
   return { score: s, why };
 }
 
+const LOCAL_MODELS = false;
+
 // Everything the model menu shows. Only usable models are listed.
 async function catalog({ mode = 'code', needVision = false } = {}) {
   const hw = await hardware();
   const s = settings.load();
-  const [ollama, lms, lcpp] = await Promise.all([
+  // Models that run on this computer are switched off for now: small ones were too unreliable at editing code.
+  const [ollama, lms, lcpp] = LOCAL_MODELS ? await Promise.all([
     ollamaModels(), openaiCompatLocal(s.endpoints.lmstudio), openaiCompatLocal(s.endpoints.llamacpp),
-  ]);
+  ]) : [{ installed: false, running: false, models: [] }, [], []];
   const providers = [];
   const rank = (list, prov) => list.map(m => ({ ...m, provider: prov, key: `${prov}:${m.id}`, ...score(m, hw, mode, needVision) }))
     .sort((a, b) => b.score - a.score);
 
-  providers.push({ id: 'ollama', name: 'Local · Ollama', kind: 'local', installed: ollama.installed, running: ollama.running, models: rank(ollama.models, 'ollama') });
+  if (LOCAL_MODELS) providers.push({ id: 'ollama', name: 'Local · Ollama', kind: 'local', installed: ollama.installed, running: ollama.running, models: rank(ollama.models, 'ollama') });
   if (lms.length) providers.push({ id: 'lmstudio', name: 'Local · LM Studio', kind: 'local', running: true, models: rank(lms, 'lmstudio') });
   if (lcpp.length) providers.push({ id: 'llamacpp', name: 'Local · llama.cpp', kind: 'local', running: true, models: rank(lcpp, 'llamacpp') });
 
@@ -187,9 +190,9 @@ function pickAuto(providers, mode, needVision) {
   const usable = best && (mode === 'plan' || best.tools) && (!needVision || best.vision);
   if (usable) return { key: best.key, reason: `Best local model for this computer: ${best.why.join(' · ')}` };
   const cloud = providers.find(p => p.kind === 'cli' && p.models.length) || providers.find(p => p.kind === 'api' && p.models.length);
-  if (cloud) return { key: cloud.models[0].key, reason: `No local model can ${needVision ? 'see images' : 'edit files'} — using ${cloud.name}` };
+  if (cloud) return { key: cloud.models[0].key, reason: LOCAL_MODELS ? `No local model can ${needVision ? 'see images' : 'edit files'} — using ${cloud.name}` : `Uses ${cloud.name}` };
   if (best) return { key: best.key, reason: 'Only local model available (limited tools)' };
-  return { key: null, reason: 'No models found. Install Ollama and pull a model, or sign in to Claude Code or Codex.' };
+  return { key: null, reason: 'No AI is set up yet. Open AI providers to install Claude Code or Codex, or connect a key.' };
 }
 
 module.exports = { catalog, hardware, ensureOllama, CLOUD_APIS, OLLAMA, getJson };

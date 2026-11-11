@@ -67,6 +67,12 @@ const P = {
   layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
   arrowUp: '<path d="M12 19V6M6 12l6-6 6 6"/>',
   link: '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+  compose: '<path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M15.5 4.5l4 4L12 16H8v-4z"/>',
+  bug: '<rect x="7" y="8" width="10" height="12" rx="5"/><path d="M9 8V6a3 3 0 0 1 6 0v2M3 13h4M17 13h4M4 19l3-2M20 19l-3-2M4 7l3 2M20 7l-3 2"/>',
+  rocket: '<path d="M14 4c3 0 6 3 6 6l-6 6-6-6 6-6z"/><path d="M8 10l-3 1-2 3 4 1M14 16l-1 3-3 2-1-4"/><circle cx="14.5" cy="9.5" r="1.5"/>',
+  wand: '<path d="M4 20 15 9M14 4v3M19 9h-3M17.5 5.5l-2 2M11 6.5 9.5 5"/>',
+  external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
+  chevronLeft: '<path d="m15 6-6 6 6 6"/>',
 };
 
 export function icon(name, cls = '') {

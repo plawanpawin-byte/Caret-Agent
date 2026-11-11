@@ -78,6 +78,16 @@ async function execute(name, args, run) {
     case 'write_file': {
       let content = String(args.content ?? '');
       if (/\.html?$/i.test(args.path)) content = ensureFavicon(content);
+      // A small model often "rewrites" a file by writing a much shorter version and silently drops half of it. Ask once before allowing that.
+      let old = null;
+      try { old = await ws.readFile(args.path, 2 * 1024 * 1024); } catch {}
+      if (old && old.length > 600 && content.length < old.length * 0.6) {
+        run.shrinkWarned = run.shrinkWarned || new Set();
+        if (!run.shrinkWarned.has(args.path)) {
+          run.shrinkWarned.add(args.path);
+          throw new Error(`write_file would replace ${old.length} characters of ${args.path} with only ${content.length}, so most of the existing code would be lost. To add or change something, use edit_file on just that part. If you really mean to shrink the file, call write_file again with the same content.`);
+        }
+      }
       const r = await ws.writeFile(args.path, content);
       run.files.push(r.path);
       run.onFileChanged(r.path);

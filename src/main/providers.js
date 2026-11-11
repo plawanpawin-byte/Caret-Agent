@@ -12,12 +12,9 @@ const CATALOG = [
     blurb: 'Uses your Claude plan. Reads, edits and runs commands in your project.', login: ['auth', 'login'], statusArgs: ['auth', 'status'], site: 'https://claude.com/claude-code' },
   { id: 'codex', name: 'Codex', by: 'OpenAI', kind: 'cli', bin: 'codex', pkg: '@openai/codex',
     blurb: 'Uses your ChatGPT plan. Writes and changes code from your prompts.', login: ['login'], statusArgs: ['login', 'status'], site: 'https://developers.openai.com/codex' },
-  { id: 'xai', name: 'Grok', by: 'xAI', kind: 'api', blurb: 'Connect with an xAI API key.', keyUrl: 'https://console.x.ai' },
-  { id: 'gemini', name: 'Gemini', by: 'Google', kind: 'api', blurb: 'Connect with a Google AI Studio key.', keyUrl: 'https://aistudio.google.com/apikey' },
-  { id: 'openai', name: 'ChatGPT (API)', by: 'OpenAI', kind: 'api', blurb: 'Connect with an OpenAI API key.', keyUrl: 'https://platform.openai.com/api-keys' },
-  { id: 'ollama', name: 'Ollama', by: 'Ollama', kind: 'local', blurb: 'Run models on this computer. Free and private.', site: 'https://ollama.com/download' },
-  { id: 'lmstudio', name: 'LM Studio', by: 'LM Studio', kind: 'local', blurb: 'Run models on this computer with a friendly app.', site: 'https://lmstudio.ai' },
-  { id: 'llamacpp', name: 'llama.cpp', by: 'ggml', kind: 'local', blurb: 'Run GGUF models with llama-server.', site: 'https://github.com/ggml-org/llama.cpp/releases' },
+  { id: 'xai', name: 'Grok', by: 'xAI', kind: 'api', blurb: 'Grok models. Connect with an xAI API key.', keyUrl: 'https://console.x.ai' },
+  { id: 'gemini', name: 'Antigravity', by: 'Google', kind: 'api', blurb: 'Gemini models. Connect with a Google AI Studio key.', keyUrl: 'https://aistudio.google.com/apikey' },
+  { id: 'openai', name: 'ChatGPT', by: 'OpenAI', kind: 'api', blurb: 'GPT models. Connect with an OpenAI API key.', keyUrl: 'https://platform.openai.com/api-keys' },
 ];
 
 const busy = new Set();

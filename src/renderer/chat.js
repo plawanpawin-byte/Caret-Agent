@@ -233,10 +233,15 @@ export function createChat() {
       welcome.classList.toggle('hidden', !empty);
       transcript.classList.toggle('hidden', empty);
       if (empty) {
-        const inner = h('div', { class: 'welcome-inner' }, h('h1', { text: `What are we building${state.settings?.name ? ', ' + state.settings.name : ''}?` }));
-        inner.append(h('div', { class: 'ctx-row' }, h('button', { class: 'ctx-chip', title: 'Folder the AI works in', onclick: () => emit('cmd', state.workspace ? 'open-folder' : 'open-folder') }, icon('folder'), state.workspace ? state.workspace.name : 'Open a folder')));
+        const name = state.settings?.name ? state.settings.name.split(' ')[0] : '';
+        const inner = h('div', { class: 'welcome-inner' },
+          h('div', { class: 'ag-hello' }, logo(30), h('h1', { text: name ? `What should we build, ${name}?` : 'What should we build?' })));
+        inner.append(h('div', { class: 'ctx-row' },
+          h('button', { class: 'ctx-chip', title: 'Folder the AI works in', onclick: () => emit('cmd', 'open-folder') }, icon('folder'), h('span', { text: state.workspace ? state.workspace.name : 'Choose a project' }), icon('down')),
+          h('span', { class: 'ctx-sep' }),
+          h('span', { class: 'ctx-note' }, icon('laptop'), 'Runs on this PC')));
         inner.append(composerWrap);
-        inner.append(suggestions());
+        inner.append(starters());
         welcome.replaceChildren(inner);
         return;
       }
@@ -271,6 +276,21 @@ export function createChat() {
     const head = h('button', { class: 'prev-head' + (prevOpen ? '' : ' closed'), onclick: () => { prevOpen = !prevOpen; try { localStorage.setItem('caret.prevOpen', prevOpen ? '1' : '0'); } catch {} head.classList.toggle('closed', !prevOpen); body.classList.toggle('hidden', !prevOpen); } },
       icon('chevron', 'chev'), h('span', { class: 'grow', text: 'Previous chats' }), h('span', { class: 'count', text: String(all.length) }));
     return h('div', { class: 'prev' }, head, body);
+  }
+
+  // Starting points under the prompt in the Agent view: what each one does, in one line.
+  function starters() {
+    const list = [
+      { icon: 'rocket', title: 'Build something new', sub: 'Describe an app or page and watch it get made', text: 'Build ', mode: 'agent' },
+      { icon: 'plan', title: 'Start with a plan', sub: 'Agree on the steps before any code changes', text: 'Plan how to ', mode: 'plan' },
+      { icon: 'bug', title: 'Fix a bug', sub: 'Find the real cause and fix it', text: 'Find and fix the bug where ', mode: 'agent' },
+      { icon: 'book', title: 'Explain this project', sub: 'How it works, where things live', text: 'Explain how this project works', mode: 'code' },
+    ];
+    return h('div', { class: 'starters' }, ...list.map(s => h('button', { class: 'starter', onclick: async () => {
+      if (state.settings.mode !== s.mode) await saveSettings({ mode: s.mode });
+      updateComposer();
+      textarea.value = s.text; autosize(); textarea.focus(); textarea.setSelectionRange(s.text.length, s.text.length);
+    } }, icon(s.icon), h('span', { class: 'starter-title', text: s.title }), h('span', { class: 'starter-sub', text: s.sub }))));
   }
 
   function suggestions() {
@@ -324,7 +344,7 @@ export function createChat() {
     ctxBtn.classList.toggle('on', useCodebase);
     permBtn.className = 'pill perm-' + (s.permission || 'ask');
     permBtn.replaceChildren(icon(p.icon), h('span', { text: p.label }), icon('down', 'caret-down'));
-    modelBtn.replaceChildren(icon(s.model && s.model !== 'auto' && /^(ollama|lmstudio|llamacpp):/.test(s.model) ? 'laptop' : s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
+    modelBtn.replaceChildren(icon(s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
       h('span', { text: s.model && s.model !== 'auto' ? modelLabel(s.model) : 'Auto' }), icon('down', 'caret-down'));
     const c = chats.get(activeId);
     const busy = !!c?.running;
@@ -348,27 +368,13 @@ export function createChat() {
   function modelItems(cat) {
     const cur = state.settings.model || 'auto';
     const items = [{ label: 'Auto', sub: cat?.auto?.reason || 'Picks the best model for the task and this computer', icon: 'sparkle', checked: cur === 'auto', onClick: () => pick('auto') }];
-    const hw = cat?.hardware;
     for (const p of cat?.providers || []) {
-      if (p.kind === 'local' && p.id === 'ollama' && !p.models.length) {
-        items.push('sep', { group: p.name }, { note: p.installed ? (p.running ? 'No models yet. Run "ollama pull qwen3:8b" in the terminal.' : 'Ollama is installed but did not start.') : 'Ollama is not installed. Get it free at ollama.com to run models on this computer.' });
-        continue;
-      }
       if (!p.models.length && !p.error) continue;
-      const right = p.kind === 'local' && hw ? (hw.vramGB ? `GPU ${Math.round(hw.vramGB)} GB` : `RAM ${Math.round(hw.ramGB)} GB`) : p.kind === 'cli' ? 'your sign-in' : 'your key';
-      items.push('sep', { group: p.name, right });
+      items.push('sep', { group: p.name, right: p.kind === 'cli' ? 'your sign-in' : 'your key' });
       if (p.error) { items.push({ note: `Could not list models: ${p.error}` }); continue; }
-      for (const m of p.models) {
-        const tooBig = m.score === -Infinity;
-        const tags = [];
-        if (p.kind === 'local') {
-          if (m.sizeGB) tags.push({ text: `${m.sizeGB.toFixed(1)} GB` });
-          if (m.tools) tags.push({ text: 'can edit files', good: true });
-          if (m.vision) tags.push({ text: 'sees images' });
-        }
-        items.push({ label: m.label || m.id, tags, sub: p.kind === 'local' ? (m.why || []).join(' · ') : null, icon: p.kind === 'local' ? 'laptop' : 'cloud', checked: cur === m.key, disabled: false, onClick: () => { if (tooBig) toast(`${m.id} is larger than this computer can run well — it may be very slow.`); pick(m.key); } });
-      }
+      for (const m of p.models) items.push({ label: m.label || m.id, icon: 'cloud', checked: cur === m.key, onClick: () => pick(m.key) });
     }
+    if (!(cat?.providers || []).some(p => p.models.length)) items.push('sep', { note: 'No AI is set up yet.' });
     items.push('sep', { label: 'Install or connect an AI…', icon: 'extensions', onClick: () => emit('cmd', 'providers') });
     return items;
   }
@@ -491,6 +497,7 @@ export function createChat() {
   function setVariant(v) {
     variant = v;
     subHead.classList.toggle('hidden', v === 'center');
+    textarea.placeholder = v === 'center' ? 'Describe a task. @ to mention a file, paste a screenshot' : 'Ask anything (Ctrl+L), @ to mention';
     if (v === 'center') el.classList.remove('empty-chat');
     renderTabs(); renderAll();
   }

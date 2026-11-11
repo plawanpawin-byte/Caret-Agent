@@ -1,5 +1,5 @@
 import { h, icon, logo, menu, toast, timeAgo, fileBadge, askText } from './ui.js';
-import { api, state, on, emit, saveSettings, modelLabel } from './state.js';
+import { api, state, on, emit, saveSettings, modelLabel, getCatalog } from './state.js';
 import { createExplorer } from './explorer.js';
 import { createEditorArea } from './editor.js';
 import { createTerminalPanel } from './terminal.js';
@@ -80,27 +80,74 @@ async function boot() {
   providersPanel.el.classList.add('hidden');
 
   // ---------- agent layout ----------
-  const sessionList = h('div', { class: 'col', style: { overflowY: 'auto', flex: 1 } });
+  // A desktop agent, not an IDE: your projects and chats on the left, the conversation in the middle.
+  // Files and the terminal are there when you ask for them; the full editor is one click away.
+  const chatFilter = h('input', { class: 'ag-filter hidden', placeholder: 'Search chats', spellcheck: 'false' });
+  const sessionList = h('div', { class: 'ag-chats' });
+  const projList = h('div', { class: 'ag-projects' });
+  const agModel = h('button', { class: 'ag-ai', title: 'AI providers', onclick: () => providersPanel.openList() });
   $('sessions').append(
-    h('button', { class: 'nav-item', onclick: () => chat.newChat() }, icon('plus'), h('span', { class: 'grow', text: 'New chat' }), h('span', { class: 'kbd', text: 'Ctrl T' })),
-    h('button', { class: 'nav-item', onclick: () => folderMenu(document.activeElement) }, icon('folder'), h('span', { class: 'grow', id: 'agent-folder', text: 'No folder' })),
-    h('button', { class: 'nav-item', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { class: 'grow', text: 'Terminal' })),
-    h('div', { class: 'nav-label' }, h('span', { class: 'grow', text: 'Chats' })),
-    sessionList);
+    h('div', { class: 'ag-nav' },
+      h('button', { class: 'ag-item strong', onclick: () => chat.newChat() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
+      h('button', { class: 'ag-item', onclick: () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } } }, icon('search'), h('span', { class: 'grow', text: 'Search chats' })),
+      h('button', { class: 'ag-item', onclick: () => providersPanel.openList() }, icon('extensions'), h('span', { class: 'grow', text: 'AI providers' }))),
+    h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Projects' }),
+      h('button', { class: 'icon-btn', title: 'Open a folder', onclick: () => emit('cmd', 'open-folder') }, icon('plus'))),
+    projList,
+    h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Chats' })),
+    chatFilter, sessionList,
+    h('div', { class: 'ag-foot' }, agModel,
+      h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))));
+  // Going to a chat or a project from the side bar leaves the AI providers page.
+  $('sessions').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b && b !== agModel && !b.textContent.includes('AI providers') && !b.closest('.ag-foot')) providersPanel.close();
+  }, true);
   $('filespane').append(filesExplorer.el);
   const agentTerm = h('div', { class: 'col hidden', style: { height: '220px', borderTop: '1px solid var(--border)', background: 'var(--panel)' } });
+  const agFilesBtn = h('button', { class: 'ag-top-btn', title: 'Show files', onclick: () => emit('cmd', 'toggle-chat') }, icon('files'), h('span', { text: 'Files' }));
+  const agTop = h('div', { class: 'ag-top' },
+    h('button', { class: 'icon-btn', title: 'Side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
+    h('span', { class: 'grow' }),
+    agFilesBtn,
+    h('button', { class: 'ag-top-btn', title: 'Terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { text: 'Terminal' })),
+    h('button', { class: 'ag-top-btn', title: 'Open the code editor', onclick: () => setLayout('studio') }, h('span', { text: 'Editor' }), icon('external')));
+  $('agent-center').append(agTop);
+  if (!store.get('agFiles', false)) $('filespane').classList.add('hidden');
 
-  on('chats', list => {
-    sessionList.replaceChildren(...list.map(c => {
-      const b = h('button', { class: 'nav-item' + (c.active ? ' on' : ''), style: { height: 'auto', padding: '6px 8px', alignItems: 'flex-start' }, onclick: () => chat.select(c.id),
-        oncontextmenu: e => { e.preventDefault(); menu(null, [
-          { label: 'Rename', icon: 'edit', onClick: () => askText('Rename chat', c.title).then(t => t && chat.rename(c.id, t)) },
-          { label: 'Delete', icon: 'trash', onClick: () => chat.deleteChat(c.id) }], { x: e.clientX, y: e.clientY }); } },
-        c.running ? h('span', { class: 'busy', style: { width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', marginTop: '7px', flex: 'none' } }) : icon('chat'),
-        h('span', { class: 'grow' }, h('div', { style: { overflow: 'hidden', textOverflow: 'ellipsis' }, text: c.title }), h('div', { class: 'session-meta', text: timeAgo(c.updatedAt) })));
-      return b;
-    }));
-  });
+  let chatRows = [];
+  function paintChats() {
+    const q = chatFilter.value.trim().toLowerCase();
+    const list = chatRows.filter(c => !q || c.title.toLowerCase().includes(q));
+    sessionList.replaceChildren(...(list.length ? list.map(c => h('button', { class: 'ag-chat' + (c.active ? ' on' : ''), title: c.title, onclick: () => chat.select(c.id),
+      oncontextmenu: e => { e.preventDefault(); menu(null, [
+        { label: 'Rename', icon: 'edit', onClick: () => askText('Rename chat', c.title).then(t => t && chat.rename(c.id, t)) },
+        { label: 'Delete', icon: 'trash', onClick: () => chat.deleteChat(c.id) }], { x: e.clientX, y: e.clientY }); } },
+      c.running ? h('span', { class: 'ag-run' }) : null,
+      h('span', { class: 'grow', text: c.title }), h('span', { class: 'ag-time', text: timeAgo(c.updatedAt) })))
+      : [h('div', { class: 'ag-empty', text: q ? 'No chat matches' : 'No chats yet' })]));
+  }
+  chatFilter.addEventListener('input', paintChats);
+  chatFilter.addEventListener('keydown', e => { if (e.key === 'Escape') { chatFilter.value = ''; chatFilter.classList.add('hidden'); paintChats(); } });
+  on('chats', list => { chatRows = list.filter(c => c.title !== 'New chat' || c.active); paintChats(); });
+
+  function paintProjects() {
+    const cur = state.workspace?.root;
+    const all = [...(cur ? [cur] : []), ...(state.settings.recentFolders || []).filter(d => d !== cur)].slice(0, 6);
+    projList.replaceChildren(...(all.length ? all.map(d => h('button', { class: 'ag-item' + (d === cur ? ' on' : ''), title: d, onclick: () => d !== cur && emit('cmd', { open: d }) },
+      icon(d === cur ? 'folderOpen' : 'folder'), h('span', { class: 'grow', text: d.split(/[\\/]/).pop() })))
+      : [h('button', { class: 'ag-item', onclick: () => emit('cmd', 'open-folder') }, icon('folder'), h('span', { class: 'grow muted', text: 'Open a folder…' }))]));
+  }
+  function paintAi() {
+    const s = state.settings;
+    const auto = !s.model || s.model === 'auto';
+    const key = auto ? state.catalog?.auto?.key : s.model;
+    const label = auto ? (key ? `Auto · ${modelLabel(key).replace(/ (your default)/, "")}` : state.catalog ? 'No AI set up' : 'Auto') : modelLabel(s.model);
+    agModel.title = auto && state.catalog?.auto?.reason ? state.catalog.auto.reason : 'AI providers';
+    agModel.replaceChildren(h('i', { class: 'dot ' + (key ? 'ok' : 'off') }), h('span', { class: 'grow', text: label }), icon('extensions'));
+  }
+  on('settings', paintAi); on('catalog', paintAi); paintAi();
+  getCatalog().catch(() => {});
 
   // ---------- layout switching ----------
   function setLayout(l) {
@@ -111,8 +158,10 @@ async function boot() {
     actAgent.classList.toggle('on', l === 'agent');
     const which = side;
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
-    if (l === 'agent') $('sessions').prepend(toolRow); else $('sidebar').prepend(toolRow);
+    // The overlay page for an AI provider lives over whichever centre is showing.
+    (l === 'agent' ? $('agent-center') : document.querySelector('#studio main.center')).append(providersPanel.page);
     if (l === 'agent') {
+      paintProjects();
       $('agent-center').append(chat.el, agentTerm);
       chat.setVariant('center');
       if (!agentTerm.classList.contains('hidden')) agentTerm.append(terminal.el);
@@ -183,7 +232,7 @@ async function boot() {
     omni.querySelector('span').textContent = name;
     omni.title = state.workspace?.root || '';
     sbFolder.querySelector('span').textContent = name;
-    $('agent-folder').textContent = name;
+    paintProjects();
     document.title = state.workspace ? `${name} — Caret Agent` : 'Caret Agent';
   }
   async function setWorkspace(ws) {
@@ -206,7 +255,10 @@ async function boot() {
       else if (c?.open) { const ws = await api.workspace.openRecent(c.open); setWorkspace(ws); }
       else if (c?.layout) setLayout(c.layout);
       else if (c === 'toggle-sidebar') state.layout === 'studio' ? showPane('sidebar') : $('sessions').classList.toggle('hidden');
-      else if (c === 'toggle-chat') state.layout === 'studio' ? showPane('chatpane') : $('filespane').classList.toggle('hidden');
+      else if (c === 'toggle-chat') {
+        if (state.layout === 'studio') showPane('chatpane');
+        else { const show = $('filespane').classList.toggle('hidden') === false; store.set('agFiles', show); agFilesBtn.classList.toggle('on', show); }
+      }
       else if (c === 'toggle-bottom' || c === 'show-bottom') {
         if (state.layout === 'studio') showPane('bottom', c === 'show-bottom' ? true : undefined);
         else { const show = c === 'show-bottom' ? true : agentTerm.classList.contains('hidden'); agentTerm.classList.toggle('hidden', !show); if (show) agentTerm.append(terminal.el); }

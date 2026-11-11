@@ -59,10 +59,10 @@ export function onboarding() {
             h('button', { class: 'layout-card' + (data.layout === 'agent' ? ' on' : ''), onclick: () => { data.layout = 'agent'; render(); } }, miniAgent(),
               h('div', { class: 't', text: 'Agent' }), h('div', { class: 'd', text: 'Chat first. Describe what you want and watch the AI build it.' }))));
       } else {
-        const list = h('div', { class: 'model-list' }, h('div', { class: 'muted', text: 'Looking for AI on this computer…' }));
+        const list = h('div', { class: 'model-list' }, h('div', { class: 'muted', text: 'Checking what is set up…' }));
         body = h('div', { class: 'body' },
-          h('h1', { text: 'Your AI, free' }),
-          h('p', { class: 'lead', text: 'Caret Agent uses models already on this computer, plus any AI you are signed in to. Nothing to buy, nothing to upgrade.' }),
+          h('h1', { text: 'Your AI' }),
+          h('p', { class: 'lead', text: 'Caret Agent works through the AI accounts you already have. The app itself is free.' }),
           list);
         refreshCatalog({ mode: 'code' }).then(cat => renderModels(list, cat));
       }
@@ -82,9 +82,7 @@ export function onboarding() {
 function renderModels(list, cat) {
   if (!cat) { list.replaceChildren(h('div', { class: 'muted', text: 'Could not check for models.' })); return; }
   const hw = cat.hardware;
-  const rows = [h('div', { class: 'model-line' }, icon('laptop'), h('span', { class: 'grow' },
-    h('div', { class: 'n', text: 'This computer' }),
-    h('div', { class: 's', text: `${Math.round(hw.ramGB)} GB memory${hw.gpu ? ` · ${hw.gpu}${hw.vramGB ? ` (${Math.round(hw.vramGB)} GB)` : ''}` : ' · no dedicated GPU found'}` })))];
+  const rows = [];
   for (const p of cat.providers) {
     if (p.kind === 'local') {
       if (p.id === 'ollama' && !p.models.length) {
@@ -101,8 +99,9 @@ function renderModels(list, cat) {
       rows.push(h('div', { class: 'model-line' }, icon('cloud'), h('span', { class: 'grow' }, h('div', { class: 'n', text: p.name }), h('div', { class: 's', text: 'Found on this computer — uses your own sign-in' })), h('span', { class: 'status-ok', text: 'Ready' })));
     }
   }
+  if (!rows.length) rows.push(h('div', { class: 'model-line' }, icon('alert'), h('span', { class: 'grow' }, h('div', { class: 'n', text: 'No AI found yet' }), h('div', { class: 's', text: 'Install Claude Code or Codex from AI providers after setup.' }))));
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: `Auto will use: ${cat.auto.key ? cat.auto.key.split(':').slice(1).join(':') : 'nothing yet'}. ${cat.auto.reason}` }));
-  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Install Claude Code or Codex, or connect Grok, Gemini and ChatGPT, any time from the AI icon in the side bar.' }));
+  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Install Claude Code or Codex, or connect Grok, Antigravity and ChatGPT, any time from AI providers.' }));
   list.replaceChildren(...rows);
 }
 
@@ -140,13 +139,11 @@ export function openSettings(section) {
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'AI providers', h('small', { text: 'Install, sign in, connect' })),
       h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Install Claude Code or Codex with one click, sign in, or connect an API key.' }),
         h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('extensions'), 'Open AI providers'))),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Local models', h('small', { text: 'Ollama, LM Studio, llama.cpp' })),
-      h('div', { class: 'muted', text: 'Found automatically. Models you install appear in the model menu — no setup.' })),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Claude and Codex', h('small', { text: 'Uses your own sign-in' })),
-      h('div', { class: 'muted', text: 'Install Claude Code or Codex and sign in once in the terminal ("claude" or "codex"). Caret Agent picks them up automatically.' })),
+      h('div', { class: 'muted', text: 'Install and sign in from AI providers. Caret Agent never sees or stores your login.' })),
     keyRow('xai', 'Grok', 'xAI API key', 'https://console.x.ai'),
-    keyRow('gemini', 'Gemini (Antigravity)', 'Google AI Studio key', 'https://aistudio.google.com/apikey'),
-    keyRow('openai', 'ChatGPT (API)', 'OpenAI API key', 'https://platform.openai.com/api-keys'),
+    keyRow('gemini', 'Antigravity (Gemini)', 'Google AI Studio key', 'https://aistudio.google.com/apikey'),
+    keyRow('openai', 'ChatGPT', 'OpenAI API key', 'https://platform.openai.com/api-keys'),
     h('div', { class: 'section-title', text: 'Project' }),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Design guide', h('small', { text: '.caret/DESIGN.md' })),
       h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Every AI reads this before building an interface — colours, spacing, what to avoid. Edit it to match your taste.' }),
