@@ -129,10 +129,10 @@ export function createChat() {
 
   // ---------- transcript ----------
   const rel = p => {
-    const r = state.workspace?.root;
-    let s = String(p || '');
-    if (r && s.toLowerCase().startsWith(r.toLowerCase())) s = s.slice(r.length).replace(/^[\\/]/, '');
-    return s.replace(/\\/g, '/');
+    const r = (state.workspace?.root || '').replace(/\\/g, '/').replace(/\/+$/, '');
+    let s = String(p || '').replace(/\\/g, '/');
+    if (r && s.toLowerCase().startsWith(r.toLowerCase() + '/')) s = s.slice(r.length + 1);
+    return s;
   };
   function toolLabel(p) {
     const a = p.args || {};
@@ -155,14 +155,17 @@ export function createChat() {
     return [n.replace(/^mcp__\w+__/, ''), ''];
   }
 
+  // While a tool is still running it should not read as finished.
+  const RUNNING_VERB = { Read: 'Reading', Wrote: 'Writing', Edited: 'Editing', Deleted: 'Deleting', Listed: 'Listing', 'Found files': 'Finding files', Searched: 'Searching', Ran: 'Running', Started: 'Starting', 'Opened preview': 'Opening preview', 'Updated project memory': 'Updating project memory', 'Saved plan': 'Saving plan', 'Updated task list': 'Updating task list', 'Read web page': 'Reading web page', 'Searched the web': 'Searching the web' };
   function renderPart(p) {
     if (p.type === 'text') { const d = h('div', { class: 'md' }); mountMarkdown(d, p.text); return d; }
     if (p.type === 'thinking') return h('details', { class: 'thinking' }, h('summary', { text: 'Thinking' }), h('div', { text: p.text }));
     if (p.type === 'error') return h('div', { class: 'part-error', text: p.text });
     if (p.type === 'note') return h('div', { class: 'part-note', text: p.text });
     if (p.type === 'tool') {
-      const [verb, target] = toolLabel(p);
-      const st = h('span', { class: 'st ' + (p.status || 'running') }, p.status === 'done' ? icon('check') : (p.status === 'error' || p.status === 'denied') ? icon('x') : null);
+      const [done, target] = toolLabel(p);
+      const verb = (!p.status || p.status === 'running') ? (RUNNING_VERB[done] || done) : done;
+      const st =h('span', { class: 'st ' + (p.status || 'running') }, p.status === 'done' ? icon('check') : (p.status === 'error' || p.status === 'denied') ? icon('x') : null);
       const sum = h('summary', {}, st, h('span', { class: 'label' }, h('b', { text: verb }), target ? h('span', { class: 'tgt', text: target }) : null, p.status === 'denied' ? ' — not allowed' : ''));
       const d = h('details', { class: 'tool' }, sum, p.result ? h('pre', { text: p.result }) : null);
       if (openDetails.has(p.id)) d.open = true;
@@ -202,10 +205,11 @@ export function createChat() {
         else if (pv.after != null) body.append(h('span', { class: 'add', text: pv.before == null ? prefix(pv.after, '+ ') : pv.after }));
         else body.textContent = pv.path;
       } else body = h('pre', { text: JSON.stringify(a.args, null, 2).slice(0, 3000) });
-      const [verb, target] = toolLabel({ name: a.tool, args: a.args });
+      const [past, target] = toolLabel({ name: a.tool, args: a.args });
+      const verb = ({ Wrote: 'Write', Edited: 'Edit', Ran: 'Run', Started: 'Start', Deleted: 'Delete', Listed: 'List', Searched: 'Search' })[past] || past;
       const decide = d => { api.agent.approve(a.reqId, d); c.approvals = c.approvals.filter(x => x !== a); renderAll(); };
       return h('div', { class: 'approval' },
-        h('div', { class: 'head' }, icon('alert'), h('span', { text: `${verb} ${target}`.trim() })),
+        h('div', { class: 'head' }, icon('alert'), h('span', { class: 'ttl' }, h('b', { text: verb }), target ? h('span', { class: 'tgt', text: target }) : null)),
         h('div', { class: 'why', text: a.reason || 'Needs your OK' }),
         body,
         h('div', { class: 'actions' },
@@ -412,13 +416,14 @@ export function createChat() {
     const auto = autoFile();
     const chip = (title, glyph, label, onRemove, dim) => h('span', { class: 'chip' + (dim ? ' dim' : ''), title },
       glyph, h('span', { text: label }), onRemove ? h('button', { title: 'Remove', onclick: onRemove }, icon('x')) : null);
-    attachEl.replaceChildren(
+    attachEl.replaceChildren(...[
       plusBtn,
       auto ? chip(auto + ' (open file)', fileBadge(auto.split('/').pop()), auto.split('/').pop(), () => { dismissedAuto = auto; renderAttachments(); }, false) : null,
       ...attachments.map(a => chip(a.path || a.name,
         a.kind === 'image' ? h('img', { src: a.dataUrl, alt: '' }) : fileBadge(a.path.split('/').pop()),
         a.kind === 'image' ? a.name : a.path.split('/').pop(),
-        () => { attachments = attachments.filter(x => x !== a); renderAttachments(); })));
+        () => { attachments = attachments.filter(x => x !== a); renderAttachments(); })),
+    ].filter(Boolean));
     updateComposer();
   }
   plusBtn.onclick = () => {

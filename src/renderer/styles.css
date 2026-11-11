@@ -1,4 +1,4 @@
-﻿/* Caret Agent â€” flat, quiet, VS Code / Cursor proportions.
+﻿/* Caret Agent - flat, quiet, VS Code / Cursor proportions.
    Neutral greys only. Amber is used for focus, the active tab line and the caret mark. */
 :root {
   --bg: #181818;          /* editor + chat */
@@ -252,8 +252,8 @@ body.agent-layout .statusbar { display: none; }
 .thinking { margin-bottom: 8px; font-size: 12.5px; color: var(--faint); }
 .thinking > summary { cursor: pointer; list-style: none; }
 .thinking > summary::-webkit-details-marker { display: none; }
-.thinking > summary::before { content: "â€º "; }
-.thinking[open] > summary::before { content: "âŒ„ "; }
+.thinking > summary::before { content: "› "; }
+.thinking[open] > summary::before { content: "⌄ "; }
 .thinking div { white-space: pre-wrap; padding: 6px 0 0 10px; border-left: 1px solid var(--border-strong); margin-top: 4px; max-height: 240px; overflow: auto; }
 .working { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 12px; margin: 4px 0 12px; }
 .working::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1s ease-in-out infinite; }
@@ -520,3 +520,12 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
   .pill[class*="perm-"] span { display: none; }
   .composer-row .pill.model { max-width: 48%; }
 }
+
+/* ---- v5: nothing in the transcript may push the panel sideways ---- */
+.transcript { overflow-x: hidden; }
+.transcript .msg, .transcript .approval, .transcript details.tool { min-width: 0; max-width: 100%; }
+.approval .head { align-items: flex-start; }
+.approval .head svg { flex: none; margin-top: 2px; }
+.approval .head .ttl { min-width: 0; overflow-wrap: anywhere; font-weight: 400; color: var(--muted); }
+.approval .head .ttl b { font-weight: 600; color: var(--text-hi); margin-right: 6px; }
+.approval .head .ttl .tgt { font-family: var(--mono); font-size: 12px; color: var(--text-hi); }
