@@ -3,6 +3,14 @@
 // context size) and any OpenAI-compatible server (LM Studio, llama.cpp, Grok,
 // Gemini, OpenAI). Messages use the OpenAI shape internally.
 
+// Node's built-in fetch gives up when a response is silent for 5 minutes, which a slow local model on a weak computer can easily
+// exceed while it reads a long prompt. Inside the app, use Chromium's network stack instead (no such limit).
+function appFetch(url, opts) {
+  let net = null;
+  try { net = require('electron').net; } catch {}
+  return net && typeof net.fetch === 'function' ? net.fetch(url, opts) : fetch(url, opts);
+}
+
 // Splits <think>…</think> that some local models put inside normal text.
 function thinkSplitter() {
   let inThink = false, carry = '';
@@ -60,7 +68,7 @@ function toOllamaMessages(messages) {
 }
 
 async function* ollamaChat({ base, model, messages, tools, signal, numCtx = 16384, think = false }) {
-  const r = await fetch(base + '/api/chat', {
+  const r = await appFetch(base + '/api/chat', {
     method: 'POST', signal, headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model, messages: toOllamaMessages(messages), tools: tools?.length ? tools : undefined, stream: true, think: think || undefined, options: { num_ctx: numCtx } }),
   });
@@ -102,7 +110,7 @@ function toOpenAIMessages(messages) {
 async function* openaiChat({ base, key, model, messages, tools, signal }) {
   const headers = { 'content-type': 'application/json' };
   if (key) headers.authorization = `Bearer ${key}`;
-  const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', {
+  const r = await appFetch(base.replace(/\/$/, '') + '/chat/completions', {
     method: 'POST', signal, headers,
     body: JSON.stringify({ model, messages: toOpenAIMessages(messages), tools: tools?.length ? tools : undefined, stream: true }),
   });

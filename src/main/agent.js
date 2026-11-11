@@ -333,6 +333,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
 
   let toolsOn = defs.length > 0;
   let saidSomething = false; // has the model written any text during this run?
+  let nudged = false;        // we ask a silent model to carry on at most once
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
     compactMessages(messages, budget);
@@ -356,6 +357,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
       throw e;
     }
     if (content.trim()) saidSomething = true;
+    if (!calls?.length && !content.trim() && !nudged && step > 0 && run.mode !== 'plan' && !run.files.length && !run.commands) {
+      // It read the project and then went quiet. One push to actually make the change usually gets a small model going.
+      nudged = true;
+      messages.push({ role: 'user', content: 'You have looked at the files but have not made the change yet. Make it now with edit_file or write_file, then give a short summary of what you did.' });
+      continue;
+    }
     if (!calls?.length) {
       // A small model sometimes ends its turn with nothing at all. Say so instead of leaving a blank reply.
       if (!content.trim() && !saidSomething && !run.files.length && !run.commands) on.text('_The model stopped without doing anything or replying. Send the request again, or pick a larger model from the model menu._');
