@@ -149,6 +149,19 @@ async function t(name, fn) {
     terminals.close(id);
   });
 
+  await t('terminal: a server started in the background reports its address (also http://[::]:port)', async () => {
+    const terminals = require('../src/main/terminal');
+    ws.setRoot(proj);
+    fs.writeFileSync(path.join(proj, 'srv.js'), "const s = require('http').createServer((q, r) => r.end('ok')).listen(0, () => console.log('Serving on http://[::]:' + s.address().port + '/'));");
+    const id = terminals.create({ cwd: proj, title: 'srv' });
+    const r = await terminals.run(id, 'node srv.js', { source: 'ai', background: true });
+    assert.ok(r.running, 'still running');
+    assert.ok(r.urls.some(u => /^http:\/\/localhost:\d+\/?$/.test(u)), 'urls: ' + JSON.stringify(r.urls) + ' out: ' + r.output);
+    terminals.kill(id);
+    await new Promise(res => setTimeout(res, 1500));
+    terminals.close(id);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();

@@ -10,7 +10,7 @@ const path = require('path');
 
 const IS_WIN = process.platform === 'win32';
 const MARK = '__CARET_CWD__';
-const LOCAL_URL = /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):\d{2,5}[^\s'"<>)\]]*/g;
+const LOCAL_URL = /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):\d{2,5}[^\s'"<>)\]]*/g;
 
 class Terminals extends EventEmitter {
   constructor() { super(); this.sessions = new Map(); this.seq = 0; }
@@ -92,7 +92,7 @@ class Terminals extends EventEmitter {
         if (output.length > 200000) output = output.slice(-100000);
         this.emit('data', { id, chunk: clean.replace(/\r?\n/g, '\r\n') });
         for (const m of clean.matchAll(LOCAL_URL)) {
-          const url = m[0].replace('0.0.0.0', 'localhost');
+          const url = m[0].replace('0.0.0.0', 'localhost').replace('[::]', 'localhost');
           if (!seenUrls.has(url)) { seenUrls.add(url); this.emit('url', { id, url }); }
         }
         if (background && seenUrls.size && !settled) {
