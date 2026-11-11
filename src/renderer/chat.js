@@ -442,7 +442,12 @@ export function createChat() {
   });
   composer.addEventListener('dragover', e => { e.preventDefault(); composer.classList.add('drop'); });
   composer.addEventListener('dragleave', () => composer.classList.remove('drop'));
-  composer.addEventListener('drop', e => { e.preventDefault(); composer.classList.remove('drop'); [...e.dataTransfer.files].forEach(addImageFile); });
+  composer.addEventListener('drop', e => {
+    e.preventDefault(); composer.classList.remove('drop');
+    const p = e.dataTransfer.getData('application/x-caret-path');
+    if (p) { if (/\.(png|jpe?g|gif|webp|bmp|ico)$/i.test(p)) toast('Drop pictures from your computer, or paste them, to show them to the AI'); else addFile(p); return; }
+    [...e.dataTransfer.files].forEach(addImageFile);
+  });
   fileInput.onchange = () => { [...fileInput.files].forEach(addImageFile); fileInput.value = ''; };
 
   async function submit() {

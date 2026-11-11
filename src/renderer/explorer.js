@@ -23,12 +23,14 @@ export function createExplorer({ title = 'Explorer', onOpen } = {}) {
       const open = it.dir && expanded.has(it.path);
       const row = h('div', {
         class: 'row' + (open ? ' open' : '') + (it.ignored || it.name.startsWith('.') ? ' dim' : '') + (selected === it.path ? ' sel' : ''),
-        style: { paddingLeft: 8 + depth * 12 + 'px', backgroundImage: guides(depth) }, title: it.path, draggable: 'false',
+        style: { paddingLeft: 8 + depth * 12 + 'px', backgroundImage: guides(depth) }, title: it.path, draggable: it.dir ? 'false' : 'true',
       },
         h('span', { class: 'chev' }, it.dir ? icon('chevron') : null),
         it.dir ? icon(open ? 'folderOpen' : 'folder') : fileBadge(it.name),
         h('span', { class: 'name', text: it.name }));
       row.dataset.path = it.path;
+      // Drag a file onto the chat box to give it to the AI.
+      if (!it.dir) row.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-caret-path', it.path); e.dataTransfer.setData('text/plain', it.path); e.dataTransfer.effectAllowed = 'copy'; });
       row.dataset.dir = it.dir ? '1' : '';
       row.onclick = () => {
         selected = it.path;
