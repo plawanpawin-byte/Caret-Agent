@@ -67,15 +67,15 @@ function toOllamaMessages(messages) {
   });
 }
 
-async function* ollamaChat({ base, model, messages, tools, signal, numCtx = 16384, think = false }) {
+async function* ollamaChat({ base, model, messages, tools, signal, numCtx = 16384, think }) {
   const r = await appFetch(base + '/api/chat', {
     method: 'POST', signal, headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model, messages: toOllamaMessages(messages), tools: tools?.length ? tools : undefined, stream: true, think: think || undefined, options: { num_ctx: numCtx } }),
+    body: JSON.stringify({ model, messages: toOllamaMessages(messages), tools: tools?.length ? tools : undefined, stream: true, think, keep_alive: '30m', options: { num_ctx: numCtx } }),
   });
   if (!r.ok) {
     const err = await httpError(r);
     // Some models reject "think"; retry once without it.
-    if (think && /think/i.test(err.message)) { yield* ollamaChat({ base, model, messages, tools, signal, numCtx, think: false }); return; }
+    if (think !== undefined && /think/i.test(err.message)) { yield* ollamaChat({ base, model, messages, tools, signal, numCtx, think: undefined }); return; }
     throw err;
   }
   const split = thinkSplitter();

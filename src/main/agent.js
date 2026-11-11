@@ -322,7 +322,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
     const info = cat?.providers.find(p => p.id === 'ollama')?.models.find(m => m.id === pick.model);
     const numCtx = Math.max(8192, Math.min(info?.ctx || 16384, 32768));
     budget = Math.floor(numCtx * 2.6); // about 4 characters per token, with room left for the answer
-    transport = (msgs, tl) => llm.ollamaChat({ base: models.OLLAMA, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal, numCtx, think: !!info?.thinking && run.mode === 'plan' });
+    transport = (msgs, tl) => llm.ollamaChat({ base: models.OLLAMA, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal, numCtx, think: info?.thinking ? run.mode === 'plan' : undefined });
   } else {
     const base = pick.provider === 'lmstudio' ? s.endpoints.lmstudio : pick.provider === 'llamacpp' ? s.endpoints.llamacpp : models.CLOUD_APIS[pick.provider]?.base;
     if (!base) throw new Error(`Unknown provider ${pick.provider}`);
