@@ -332,6 +332,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   }
 
   let toolsOn = defs.length > 0;
+  let saidSomething = false; // has the model written any text during this run?
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
     compactMessages(messages, budget);
@@ -354,7 +355,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
       }
       throw e;
     }
-    if (!calls?.length) return;
+    if (content.trim()) saidSomething = true;
+    if (!calls?.length) {
+      // A small model sometimes ends its turn with nothing at all. Say so instead of leaving a blank reply.
+      if (!content.trim() && !saidSomething && !run.files.length && !run.commands) on.text('_The model stopped without doing anything or replying. Send the request again, or pick a larger model from the model menu._');
+      return;
+    }
     messages.push({ role: 'assistant', content, tool_calls: calls });
     for (const call of calls) {
       if (run.stopped) return;
