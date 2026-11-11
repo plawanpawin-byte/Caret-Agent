@@ -581,3 +581,12 @@ a:hover { text-decoration: underline; }
 .md table { display: block; max-width: 100%; overflow-x: auto; }
 .md th, .md td { min-width: 56px; text-align: left; vertical-align: top; overflow-wrap: break-word; word-break: normal; }
 .md td:last-child, .md th:last-child { min-width: 120px; }
+/* Narrow windows: give the editor room instead of squeezing it to a sliver */
+.center { min-width: 0; }
+@media (max-width: 1100px) {
+  #sidebar { width: 220px !important; }
+  #chatpane { width: 340px !important; }
+  .watermark .mark { width: 88px; height: 88px; margin-bottom: 16px; }
+  .watermark .title { margin-bottom: 12px; }
+  .shortcut .kbd { display: none; }
+}
