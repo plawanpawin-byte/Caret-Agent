@@ -180,6 +180,21 @@ async function t(name, fn) {
     assert.strictEqual(compactMessages(small, 100000), false, 'nothing to do under budget');
   });
 
+  await t('Thai and spaced folder and file names work everywhere (list, read, write, search, safety)', async () => {
+    const thaiRoot = path.join(base, 'โปรเจกต์ ทดสอบ');
+    fs.mkdirSync(path.join(thaiRoot, 'หน้าเว็บ'), { recursive: true });
+    fs.mkdirSync(path.join(thaiRoot, '.git'));
+    ws.setRoot(thaiRoot);
+    await ws.writeFile('หน้าเว็บ/สวัสดี ชาวโลก.html', '<h1>สวัสดี</h1>');
+    const items = await ws.listDir('หน้าเว็บ');
+    assert.deepStrictEqual(items.map(i => i.name), ['สวัสดี ชาวโลก.html']);
+    assert.strictEqual(await ws.readFile('หน้าเว็บ/สวัสดี ชาวโลก.html'), '<h1>สวัสดี</h1>');
+    const found = await ws.search('สวัสดี');
+    assert.ok(found.some(f => f.path.endsWith('สวัสดี ชาวโลก.html')), JSON.stringify(found));
+    await assert.rejects(() => ws.writeFile('../escape ไทย.txt', 'x'));
+    ws.setRoot(proj);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();
