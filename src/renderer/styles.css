@@ -432,7 +432,7 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .tab { padding: 0 8px 0 12px; font-size: 12.5px; gap: 7px; color: #a0a0a0; border-right: 1px solid #1e1e1e; }
 .tab.on { background: var(--bg); color: #fff; }
 .tab.on::after { top: 0; height: 2px; background: var(--accent); }
-.tab.dirty .name { font-style: italic; }
+.tab.dirty .name { font-style: italic; padding-right: 3px; }
 .ficon { width: 17px; height: 15px; border-radius: 3px; background: color-mix(in srgb, var(--c, #888) 20%, transparent); color: var(--c, #888); font: 700 8px/15px var(--mono); letter-spacing: -.02em; text-align: center; display: inline-block; }
 .row .ficon { margin-right: 2px; }
 
