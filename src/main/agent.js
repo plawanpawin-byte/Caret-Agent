@@ -282,7 +282,13 @@ function recentHistory(tab) {
 
 function friendlyError(e, label) {
   const m = String(e?.message || e);
-  if (/ECONNREFUSED|fetch failed/i.test(m) && /^ollama/.test(label)) return 'Ollama is not running. Start Ollama and try again.';
+  if (/ECONNREFUSED|fetch failed|ENOTFOUND|ETIMEDOUT/i.test(m)) {
+    const provider = String(label || '').split(':')[0];
+    if (provider === 'ollama') return 'Ollama is not running. Start Ollama and try again.';
+    if (provider === 'lmstudio') return 'Cannot reach LM Studio. Open LM Studio, load a model and turn on its local server, then try again.';
+    if (provider === 'llamacpp') return 'Cannot reach llama.cpp. Start llama-server and try again, or check the address in Settings.';
+    if (models.CLOUD_APIS[provider]) return `Cannot reach ${models.CLOUD_APIS[provider].name}. Check your internet connection and try again.`;
+  }
   if (/does not support tools/i.test(m)) return `${label} cannot use tools. Pick a model marked "can edit files", or switch to Plan mode.`;
   if (/401|403|invalid api key|unauthorized/i.test(m)) return `The service refused the key or sign-in for ${label}. Check it in Settings.`;
   if (/not installed or not on PATH/i.test(m)) return m;
