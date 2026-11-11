@@ -42,6 +42,13 @@ function ensureFavicon(html) {
   return html.replace(/<head[^>]*>/i, m => m + tag);
 }
 
+// After a model writes a plain .js file, tell it at once if the file cannot even be parsed, so it fixes it instead of moving on.
+function syntaxNote(file, code) {
+  if (!/\.(js|cjs)$/i.test(file) || /^\s*(import|export)\s/m.test(code)) return '';
+  try { new (require('vm').Script)(code, { filename: file }); return ''; }
+  catch (e) { return ` WARNING: ${file} has a JavaScript syntax error (${e.message}). Read the file and fix it now.`; }
+}
+
 function numbered(text, start = 1, end) {
   const lines = text.split(/\r?\n/);
   const s = Math.max(1, start || 1);
@@ -74,7 +81,7 @@ async function execute(name, args, run) {
       const r = await ws.writeFile(args.path, content);
       run.files.push(r.path);
       run.onFileChanged(r.path);
-      return `${r.created ? 'Created' : 'Updated'} ${r.path} (${content.split('\n').length} lines).`;
+      return `${r.created ? 'Created' : 'Updated'} ${r.path} (${content.split('\n').length} lines).` + syntaxNote(r.path, content);
     }
     case 'edit_file': {
       const text = await ws.readFile(args.path);
@@ -96,7 +103,7 @@ async function execute(name, args, run) {
       const r = await ws.writeFile(args.path, next);
       run.files.push(r.path);
       run.onFileChanged(r.path);
-      return `Edited ${r.path} (${args.replace_all ? count : 1} change${count > 1 && args.replace_all ? 's' : ''}).`;
+      return `Edited ${r.path} (${args.replace_all ? count : 1} change${count > 1 && args.replace_all ? 's' : ''}).` + syntaxNote(r.path, next);
     }
     case 'delete_file': {
       await ws.deleteEntry(args.path);
