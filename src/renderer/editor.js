@@ -47,6 +47,7 @@ function languageFor(path) {
 
 export function createEditorArea() {
   const tabBar = h('div', { class: 'tabs' });
+  tabBar.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { tabBar.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
   const crumbs = h('div', { class: 'crumbs' });
   const host = h('div', { id: 'editor-host' });
   const blank = h('div', { class: 'empty' });
@@ -73,6 +74,8 @@ export function createEditorArea() {
     }));
     crumbs.replaceChildren(...(active ? active.path.split('/').flatMap((p, i, a) => [h('span', { text: p }), i < a.length - 1 ? icon('chevron') : null]).filter(Boolean) : []));
     crumbs.querySelectorAll('svg').forEach(s => { s.style.width = '11px'; s.style.height = '11px'; });
+    // Many tabs scroll sideways: keep the active one in view, and let the mouse wheel scroll the bar.
+    tabBar.querySelector('.tab.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     showEmpty();
     emit('editor-tabs', { active: active?.path || null, paths: tabs.map(t => t.path) });
   }
