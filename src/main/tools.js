@@ -79,9 +79,17 @@ async function execute(name, args, run) {
     case 'edit_file': {
       const text = await ws.readFile(args.path);
       const oldText = String(args.old_text ?? '');
-      if (!oldText) throw new Error('old_text is empty');
+      if (!oldText) throw new Error('old_text is empty. To add something, put one line that already exists in the file in old_text, and repeat that line in new_text together with your addition. To replace the whole file, use write_file instead.');
       const count = text.split(oldText).length - 1;
-      if (count === 0) throw new Error('old_text was not found. Read the file again and copy the text exactly (including spaces).');
+      if (count === 0) {
+        // Point at the closest real line, so a small model can fix its copy instead of guessing again.
+        const key = oldText.split('\n').map(l => l.trim()).find(l => l.length > 3);
+        const lines = text.split('\n');
+        const squash = x => x.replace(/\s+/g, ''); // models often get spacing wrong, so compare without whitespace
+        const at = key ? lines.findIndex(l => squash(l).includes(squash(key))) : -1;
+        const hint = at >= 0 ? ` A line containing "${key.slice(0, 60)}" does exist at line ${at + 1}: ${JSON.stringify(lines[at].slice(0, 160))} — copy it exactly, including the indentation.` : '';
+        throw new Error('old_text was not found in the file. Read the file again and copy the text exactly (including spaces and indentation).' + hint);
+      }
       if (count > 1 && !args.replace_all) throw new Error(`old_text appears ${count} times. Include more surrounding lines so it is unique, or set replace_all.`);
       let next = args.replace_all ? text.split(oldText).join(String(args.new_text ?? '')) : text.replace(oldText, () => String(args.new_text ?? ''));
       if (/\.html?$/i.test(args.path)) next = ensureFavicon(next);

@@ -16,6 +16,7 @@ app.whenReady().then(async () => {
   const agent = require('../src/main/agent');
   const cli = require('../src/main/cli'); cli.fixPath();
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'caret-proj-'));
+  if (process.env.E2E_COPY) fs.cpSync(process.env.E2E_COPY, proj, { recursive: true, filter: src => !/[\/](\.git|node_modules)([\/]|$)/.test(src) }); // start from a copy of a real project
   ws.setRoot(proj);
   const events = [];
   agent.init({ emit: ev => { events.push(ev); if (ev.type === 'tool' && ev.part.status !== 'running') log('tool', ev.part.name, ev.part.status, JSON.stringify(ev.part.args).slice(0, 90), ev.part.status === 'error' ? '=> ' + String(ev.part.result || '').slice(0, 200) : ''); if (ev.type === 'approval') { const ok = ['write_file', 'edit_file', 'Write', 'Edit', 'MultiEdit'].includes(ev.tool); log('approval requested:', ev.tool, ok ? '-> allowed' : '-> DENIED (test only allows file writes)'); require('../src/main/agent').answerApproval(ev.reqId, ok ? 'allow' : 'deny'); } if (ev.type === 'error') log('ERROR', ev.text); }, openPreview: u => log('preview', u), onFileChanged: () => {} });

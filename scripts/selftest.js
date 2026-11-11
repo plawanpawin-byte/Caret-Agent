@@ -195,6 +195,17 @@ async function t(name, fn) {
     ws.setRoot(proj);
   });
 
+  await t('edit_file errors tell the model how to fix the call (empty text, wrong spacing)', async () => {
+    const tools = require('../src/main/tools');
+    ws.setRoot(proj);
+    const NL = String.fromCharCode(10);
+    fs.writeFileSync(path.join(proj, 'a.js'), ['function hello() {', '    return 1;', '}', ''].join(NL));
+    const run = { files: [], onFileChanged() {}, commands: 0 };
+    await assert.rejects(() => tools.execute('edit_file', { path: 'a.js', old_text: '', new_text: 'x' }, run), /write_file/);
+    await assert.rejects(() => tools.execute('edit_file', { path: 'a.js', old_text: 'function hello(){', new_text: 'x' }, run), e => e.message.includes('line 1: "function hello() {"'));
+    assert.match(await tools.execute('edit_file', { path: 'a.js', old_text: 'return 1;', new_text: 'return 2;' }, run), /Edited/);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();
