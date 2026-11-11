@@ -1,5 +1,6 @@
 // First-run setup, Settings and the Clone dialog.
 import { h, icon, logo, toast } from './ui.js';
+import { brand } from './brands.js';
 import { api, state, emit, saveSettings, refreshCatalog } from './state.js';
 
 const ROLES = [
@@ -96,11 +97,11 @@ function renderModels(list, cat) {
         h('div', { class: 'n', text: `${p.name} — ${p.models.length} model${p.models.length > 1 ? 's' : ''}` }),
         h('div', { class: 's', text: best ? `Best fit: ${best.id} (${(best.why || []).join(' · ')})` : '' })), h('span', { class: 'status-ok', text: 'Ready' })));
     } else if (p.kind === 'cli') {
-      rows.push(h('div', { class: 'model-line' }, icon('cloud'), h('span', { class: 'grow' }, h('div', { class: 'n', text: p.name }), h('div', { class: 's', text: 'Found on this computer — uses your own sign-in' })), h('span', { class: 'status-ok', text: 'Ready' })));
+      rows.push(h('div', { class: 'model-line' }, brand(p.id, 30), h('span', { class: 'grow' }, h('div', { class: 'n', text: p.name }), h('div', { class: 's', text: 'Found on this computer — uses your own sign-in' })), h('span', { class: 'status-ok', text: 'Ready' })));
     }
   }
   if (!rows.length) rows.push(h('div', { class: 'model-line' }, icon('alert'), h('span', { class: 'grow' }, h('div', { class: 'n', text: 'No AI found yet' }), h('div', { class: 's', text: 'Install Claude Code or Codex from AI providers after setup.' }))));
-  rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: `Auto will use: ${cat.auto.key ? cat.auto.key.split(':').slice(1).join(':') : 'nothing yet'}. ${cat.auto.reason}` }));
+  rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: cat.auto.key ? `Auto will use ${(cat.providers.find(p => p.id === cat.auto.key.split(':')[0]) || {}).name || cat.auto.key}.` : cat.auto.reason }));
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Install Claude Code or Codex, or connect Grok, Antigravity and ChatGPT, any time from AI providers.' }));
   list.replaceChildren(...rows);
 }

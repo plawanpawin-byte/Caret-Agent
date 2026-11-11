@@ -142,7 +142,7 @@ async function boot() {
     const s = state.settings;
     const auto = !s.model || s.model === 'auto';
     const key = auto ? state.catalog?.auto?.key : s.model;
-    const label = auto ? (key ? `Auto · ${modelLabel(key).replace(/ (your default)/, "")}` : state.catalog ? 'No AI set up' : 'Auto') : modelLabel(s.model);
+    const label = auto ? (key ? `Auto · ${modelLabel(key).split(" (")[0]}` : state.catalog ? 'No AI set up' : 'Auto') : modelLabel(s.model);
     agModel.title = auto && state.catalog?.auto?.reason ? state.catalog.auto.reason : 'AI providers';
     agModel.replaceChildren(h('i', { class: 'dot ' + (key ? 'ok' : 'off') }), h('span', { class: 'grow', text: label }), icon('extensions'));
   }
