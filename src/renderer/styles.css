@@ -532,3 +532,6 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 /* Links are never the browser default dark blue. */
 a { color: #7db4f0; text-decoration: none; cursor: pointer; }
 a:hover { text-decoration: underline; }
+/* Search results */
+.hit-line { font: 11.5px/1.5 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.hit-line .hit { color: #fff; background: rgba(224,160,70,.28); border-radius: 2px; }

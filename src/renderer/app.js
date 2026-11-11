@@ -236,6 +236,15 @@ async function boot() {
   }
 }
 
+// Shows the matching part of a line, centred and highlighted, so the match is never cut off.
+function snippet(text, q) {
+  const t = String(text || '').trim();
+  const i = t.toLowerCase().indexOf(String(q || '').toLowerCase());
+  if (i < 0) return [t];
+  const start = Math.max(0, i - 24);
+  return [(start ? '…' : '') + t.slice(start, i), h('span', { class: 'hit', text: t.slice(i, i + q.length) }), t.slice(i + q.length)];
+}
+
 function createSearch() {
   const input = h('input', { class: 'field', placeholder: 'Search in files', spellcheck: 'false' });
   const results = h('div', { class: 'tree' });
@@ -253,7 +262,7 @@ function createSearch() {
       if (!res.length) { results.replaceChildren(h('div', { class: 'muted', style: { padding: '8px 12px' }, text: 'No results' })); return; }
       results.replaceChildren(...res.map(r => h('div', { class: 'row', style: { paddingLeft: '10px', height: 'auto', padding: '3px 10px', flexDirection: 'column', alignItems: 'flex-start' }, onclick: () => emit('open-file', r.path) },
         h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } }, fileBadge(r.path), h('span', { text: r.path.split('/').pop() }), h('span', { class: 'muted', style: { fontSize: '11px' }, text: r.line ? `:${r.line}` : '' })),
-        r.line ? h('div', { class: 'muted mono', style: { fontSize: '11.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }, text: r.text }) : null)));
+        r.line ? h('div', { class: 'hit-line' }, ...snippet(r.text, q)) : null)));
     }, 250);
   });
   return { el, focus: () => input.focus() };
