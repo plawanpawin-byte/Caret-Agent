@@ -732,3 +732,4 @@ body.agent-layout .pp-list { display: block; }
 .pp-fact span:first-child { width: 64px; flex: none; color: var(--muted); }
 .pp-side a { display: block; padding: 3px 0; }
 @media (max-width: 900px) { .pp-cols { flex-direction: column; gap: 22px; } .pp-side { width: 100%; } .pp-hero .brand-tile { width: 56px !important; height: 56px !important; } }
+.ai-row { display: flex; gap: 8px; }

@@ -115,36 +115,17 @@ export function openSettings(section) {
   const role = h('select', { class: 'field' }, ...ROLES.map(([t]) => h('option', { value: t, selected: s.role === t }, t)));
   const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'Studio (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (chat first)'));
 
-  const keyRow = (id, label, hint, url) => {
-    const input = h('input', { class: 'field', type: 'password', placeholder: s.keysSet?.[id] ? 'Saved — paste a new key to replace' : 'Paste your API key', autocomplete: 'off', spellcheck: 'false' });
-    const st = h('div', { class: s.keysSet?.[id] ? 'status-ok' : 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: s.keysSet?.[id] ? 'Connected' : 'Not connected' });
-    return h('div', { class: 'setting' },
-      h('div', { class: 'l' }, label, h('small', { text: hint })),
-      h('div', {},
-        h('div', { class: 'key-row' }, input,
-          h('button', { class: 'btn', onclick: async () => {
-            try { state.settings = await api.settings.setKey(id, input.value.trim()); input.value = ''; st.textContent = 'Connected'; st.className = 'status-ok'; toast(`${label} connected`); refreshCatalog(); }
-            catch (e) { toast(e.message, { error: true }); }
-          } }, 'Save'),
-          s.keysSet?.[id] ? h('button', { class: 'btn ghost danger', onclick: async () => { state.settings = await api.settings.setKey(id, ''); st.textContent = 'Not connected'; st.className = 'muted'; refreshCatalog(); } }, 'Remove') : null),
-        st,
-        h('a', { href: '#', 'data-href': url, style: { fontSize: '12px' }, class: 'md', text: 'Where do I get a key?' })));
-  };
-
   const body = h('div', { class: 'modal-body' },
     h('div', { class: 'section-title', text: 'You' }),
     h('div', { class: 'setting' }, h('div', { class: 'l', text: 'Name' }), name),
     h('div', { class: 'setting' }, h('div', { class: 'l', text: 'Role' }), role),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Default view', h('small', { text: 'Which layout opens first' })), layout),
-    h('div', { class: 'section-title', id: 'models-section', text: 'AI connections' }),
+    h('div', { class: 'section-title', id: 'models-section', text: 'AI' }),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'AI providers', h('small', { text: 'Install, sign in, connect' })),
-      h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Install Claude Code or Codex with one click, sign in, or connect an API key.' }),
+      h('div', {},
+        h('div', { class: 'ai-row' }, ...['claude', 'codex', 'xai', 'gemini', 'openai'].map(id => brand(id, 28))),
+        h('div', { class: 'muted', style: { margin: '8px 0' }, text: 'Claude Code and Codex use your own sign-in. Grok, Antigravity and ChatGPT use an API key, kept encrypted on this computer. All of it is set up in one place.' }),
         h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('extensions'), 'Open AI providers'))),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Claude and Codex', h('small', { text: 'Uses your own sign-in' })),
-      h('div', { class: 'muted', text: 'Install and sign in from AI providers. Caret Agent never sees or stores your login.' })),
-    keyRow('xai', 'Grok', 'xAI API key', 'https://console.x.ai'),
-    keyRow('gemini', 'Antigravity (Gemini)', 'Google AI Studio key', 'https://aistudio.google.com/apikey'),
-    keyRow('openai', 'ChatGPT', 'OpenAI API key', 'https://platform.openai.com/api-keys'),
     h('div', { class: 'section-title', text: 'Project' }),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Design guide', h('small', { text: '.caret/DESIGN.md' })),
       h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Every AI reads this before building an interface — colours, spacing, what to avoid. Edit it to match your taste.' }),

@@ -206,6 +206,20 @@ async function t(name, fn) {
     assert.match(await tools.execute('edit_file', { path: 'a.js', old_text: 'return 1;', new_text: 'return 2;' }, run), /Edited/);
   });
 
+  await t('write_file refuses once when it would drop most of a file; failed commands are recognised', async () => {
+    const tools = require('../src/main/tools');
+    const { failedRun } = require('../src/main/agent');
+    ws.setRoot(proj);
+    fs.writeFileSync(path.join(proj, 'big.js'), 'const x = 1;\n'.repeat(100));
+    const run = { files: [], onFileChanged() {}, commands: 0 };
+    await assert.rejects(() => tools.execute('write_file', { path: 'big.js', content: 'const x = 1;\n' }, run), /most of the existing code/);
+    assert.match(await tools.execute('write_file', { path: 'big.js', content: 'const x = 1;\n' }, run), /Updated/, 'second identical call is allowed');
+    assert.strictEqual(failedRun('npm ERR! missing script\n[exit code 1]'), true);
+    assert.strictEqual(failedRun('ok\n[exit code ?]'), true, 'a timed-out command counts as failed');
+    assert.strictEqual(failedRun('done\n[exit code 0]'), false);
+    assert.strictEqual(failedRun('ready\n[still running in the background at http://localhost:3000]'), false);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();

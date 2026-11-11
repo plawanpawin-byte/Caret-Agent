@@ -441,4 +441,4 @@ function failedRun(result) {
 
 function shutdown() { for (const id of running.keys()) stop(id); bridge?.then(b => b.server.close(), () => {}); }
 
-module.exports = { compactMessages, init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };
+module.exports = { compactMessages, failedRun, init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };
