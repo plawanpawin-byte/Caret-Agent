@@ -13,7 +13,7 @@ const ALL = {
   search: fn('search', 'Find text in all project files (case-insensitive). Returns file:line matches.', { query: { type: 'string' } }, ['query']),
   write_file: fn('write_file', 'Create a file or replace its whole content.', { path: { type: 'string' }, content: { type: 'string' } }, ['path', 'content']),
   edit_file: fn('edit_file', 'Replace an exact piece of text in a file. old_text must appear exactly once unless replace_all is true.', { path: { type: 'string' }, old_text: { type: 'string' }, new_text: { type: 'string' }, replace_all: { type: 'boolean' } }, ['path', 'old_text', 'new_text']),
-  delete_file: fn('delete_file', 'Move a file or folder to the recycle bin.', { path: { type: 'string' } }, ['path']),
+  delete_file: fn('delete_file', 'Move a file or folder to the recycle bin. Only use it when the user asked to remove something. Never delete a file in order to rewrite it: write_file already replaces the whole content.', { path: { type: 'string' } }, ['path']),
   run_command: fn('run_command', 'Run a shell command in the project folder, in a terminal the user can see. Use background:true for servers and watchers (returns after start-up with any local URL).', { command: { type: 'string' }, background: { type: 'boolean' } }, ['command']),
   open_preview: fn('open_preview', 'Open a local web address (http://localhost:PORT) in the app\'s preview window.', { url: { type: 'string' } }, ['url']),
   update_progress: fn('update_progress', 'Save the hand-off note for the next AI in .caret/HANDOFF.md. Call this before you finish.', { state: { type: 'string', description: 'What the project is, what is done, what is half-done' }, next_steps: { type: 'array', items: { type: 'string' } } }, ['state', 'next_steps']),

@@ -320,7 +320,13 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   if (pick.provider === 'ollama') {
     const cat = await models.catalog({ mode: run.mode }).catch(() => null);
     const info = cat?.providers.find(p => p.id === 'ollama')?.models.find(m => m.id === pick.model);
-    const numCtx = Math.max(8192, Math.min(info?.ctx || 16384, 32768));
+    let numCtx = Math.max(8192, Math.min(info?.ctx || 16384, 32768));
+    // A bigger context needs more GPU memory. When it no longer fits, part of the model runs on the CPU and everything gets several times slower.
+    const hw = cat?.hardware;
+    if (hw?.vramGB && info?.sizeGB && hw.gpu && !/apple/i.test(hw.gpu)) {
+      const spare = hw.vramGB * 0.92 - info.sizeGB * 1.1;
+      numCtx = Math.min(numCtx, spare >= 2 ? 32768 : spare >= 0.6 ? 16384 : 8192);
+    }
     budget = Math.floor(numCtx * 2.6); // about 4 characters per token, with room left for the answer
     transport = (msgs, tl) => llm.ollamaChat({ base: models.OLLAMA, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal, numCtx, think: info?.thinking ? run.mode === 'plan' : undefined });
   } else {
@@ -357,9 +363,9 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         step--; continue;
       }
       // A small model sometimes writes a tool call the server cannot parse (broken XML/JSON). Ask it to try again instead of failing the whole run.
-      if (toolsOn && badCalls < 2 && /syntax error|error parsing tool call|invalid character|unexpected end of JSON|unmarshal/i.test(e.message)) {
+      if (toolsOn && badCalls < 4 && /syntax error|error parsing tool call|invalid character|unexpected end of JSON|unmarshal/i.test(e.message)) {
         badCalls++;
-        messages.push({ role: 'user', content: 'Your last tool call was malformed and could not be read. Call the tool again with simple, valid arguments. For a long file, use write_file in one piece, or make smaller edit_file changes.' });
+        messages.push({ role: 'user', content: 'Your last tool call was malformed and could not be read. Call the tool again with simple, valid arguments. Keep it small: change one short piece at a time with edit_file, and do not put tags such as </parameter> or <function> inside the text.' });
         continue;
       }
       throw e;
