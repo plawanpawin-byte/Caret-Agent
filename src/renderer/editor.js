@@ -5,7 +5,7 @@ import { api, state, on, emit } from './state.js';
 
 let monaco = null;
 let editor = null;
-const tabs = []; // { path, model, view, dirty, saved }
+const tabs = []; // { path, model, view, dirty, saved } — or { path, image: { url, size } } for a picture
 let active = null;
 
 function loadMonaco() {
@@ -50,12 +50,14 @@ export function createEditorArea() {
   const crumbs = h('div', { class: 'crumbs' });
   const host = h('div', { id: 'editor-host' });
   const blank = h('div', { class: 'empty' });
-  const el = h('div', { class: 'col', style: { flex: 1 } }, tabBar, crumbs, host, blank);
+  const picture = h('div', { class: 'img-view hidden' });
+  const el = h('div', { class: 'col', style: { flex: 1 } }, tabBar, crumbs, host, picture, blank);
 
   function showEmpty() {
     tabBar.classList.toggle('hidden', !tabs.length);
     crumbs.classList.toggle('hidden', !active);
-    host.classList.toggle('hidden', !active);
+    host.classList.toggle('hidden', !active || !!active.image);
+    picture.classList.toggle('hidden', !active?.image);
     blank.classList.toggle('hidden', !!active);
     if (active) return;
     blank.replaceChildren(state.workspace ? folderWelcome() : noFolder());
@@ -78,7 +80,15 @@ export function createEditorArea() {
   async function open(path) {
     let t = tabs.find(x => x.path === path);
     if (!t) {
-      if (/\.(png|jpe?g|gif|webp|ico|pdf|zip|exe|dll|woff2?|ttf|mp[34]|wav)$/i.test(path)) { toast('This file type cannot be opened as text'); return; }
+      if (/\.(png|jpe?g|gif|webp|ico|bmp|svg)$/i.test(path)) {
+        let image;
+        try { image = await api.fs.readImage(path); } catch (e) { toast(e.message, { error: true }); return; }
+        t = { path, image, dirty: false };
+        tabs.push(t);
+        activate(t);
+        return;
+      }
+      if (/\.(pdf|zip|exe|dll|woff2?|ttf|mp[34]|wav)$/i.test(path)) { toast('This file type cannot be opened as text'); return; }
       let text;
       try { text = await api.fs.read(path); } catch (e) { toast(e.message, { error: true }); return; }
       await loadMonaco();
@@ -102,10 +112,19 @@ export function createEditorArea() {
     editor.onDidChangeCursorPosition(e => emit('cursor', { line: e.position.lineNumber, col: e.position.column, lang: active ? active.model.getLanguageId() : '' }));
   }
 
+  function showPicture(t) {
+    const img = h('img', { src: t.image.url, alt: t.path, draggable: 'false' });
+    const info = h('div', { class: 'img-info', text: `${(t.image.size / 1024).toFixed(t.image.size < 10240 ? 1 : 0)} KB` });
+    img.addEventListener('load', () => { info.textContent = `${img.naturalWidth} × ${img.naturalHeight} · ${(t.image.size / 1024).toFixed(t.image.size < 10240 ? 1 : 0)} KB`; });
+    picture.replaceChildren(h('div', { class: 'img-stage' }, img), info);
+    emit('cursor', { line: 1, col: 1, lang: 'image' });
+  }
+
   function activate(t) {
-    if (active && editor) active.view = editor.saveViewState();
+    if (active && editor && !active.image) active.view = editor.saveViewState();
     active = t;
-    if (t && editor) {
+    if (t?.image) showPicture(t);
+    else if (t && editor) {
       editor.setModel(t.model);
       if (t.view) editor.restoreViewState(t.view);
       editor.focus();
@@ -115,7 +134,7 @@ export function createEditorArea() {
   }
 
   async function save(t) {
-    if (!t) return;
+    if (!t || t.image) return;
     const text = t.model.getValue();
     try { await api.fs.write(t.path, text); t.saved = text; t.dirty = false; renderTabs(); }
     catch (e) { toast(e.message, { error: true }); }
@@ -125,17 +144,17 @@ export function createEditorArea() {
     if (t.dirty && !confirm(`${t.path} has unsaved changes. Close anyway?`)) return;
     const i = tabs.indexOf(t);
     tabs.splice(i, 1);
-    t.model.dispose();
+    t.model?.dispose();
     if (active === t) { active = null; activate(tabs[Math.min(i, tabs.length - 1)] || null); if (!tabs.length && editor) editor.setModel(null); }
     else renderTabs();
   }
 
-  function closeAll() { for (const t of [...tabs]) { t.model.dispose(); } tabs.length = 0; active = null; editor?.setModel(null); renderTabs(); }
+  function closeAll() { for (const t of [...tabs]) { t.model?.dispose(); } tabs.length = 0; active = null; editor?.setModel(null); renderTabs(); }
 
   // Reload files the AI (or anything else) changed, unless the user has edits.
   async function syncFromDisk() {
     for (const t of tabs) {
-      if (t.dirty) continue;
+      if (t.dirty || t.image) continue;
       try {
         const text = await api.fs.read(t.path);
         if (text !== t.saved) { t.saved = text; const pos = t === active ? editor.getPosition() : null; t.model.setValue(text); if (pos) editor.setPosition(pos); }

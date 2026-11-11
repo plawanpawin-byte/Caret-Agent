@@ -410,7 +410,7 @@ export function createChat() {
   }
   // The file open in the editor is added automatically (remove it with the x).
   let activePath = null, openPaths = [], dismissedAuto = null;
-  const autoFile = () => (activePath && dismissedAuto !== activePath && !attachments.some(a => a.kind === 'file' && a.path === activePath)) ? activePath : null;
+  const autoFile = () => (activePath && !/\.(png|jpe?g|gif|webp|ico|bmp)$/i.test(activePath) && dismissedAuto !== activePath && !attachments.some(a => a.kind === 'file' && a.path === activePath)) ? activePath : null;
 
   function renderAttachments() {
     const auto = autoFile();

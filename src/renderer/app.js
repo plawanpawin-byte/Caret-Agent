@@ -169,7 +169,7 @@ async function boot() {
   $('statusbar').append(sbFolder, sbMsg, h('span', { class: 'grow' }), sbCursor, sbLang, sbMem, sbModel);
   let msgTimer;
   on('status', t => { sbMsg.textContent = t; clearTimeout(msgTimer); msgTimer = setTimeout(() => (sbMsg.textContent = ''), 8000); });
-  on('cursor', c => { sbCursor.textContent = `Ln ${c.line}, Col ${c.col}`; sbLang.textContent = c.lang || ''; });
+  on('cursor', c => { sbCursor.textContent = c.lang === 'image' ? '' : `Ln ${c.line}, Col ${c.col}`; sbLang.textContent = c.lang || ''; });
   on('editor-tabs', ({ active }) => { if (!active) { sbCursor.textContent = ''; sbLang.textContent = ''; } });
   const paintModel = () => {
     const s = state.settings;

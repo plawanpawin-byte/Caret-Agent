@@ -83,7 +83,8 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.once('ready-to-show', () => win.show());
+  // In the screenshot test the window must not steal focus or react to a real mouse or keyboard.
+  win.once('ready-to-show', () => { if (process.env.CARET_SCREENSHOT) { win.setIgnoreMouseEvents(true); win.showInactive(); } else win.show(); });
   // Test hook: CARET_SCREENSHOT=file.png saves a picture of the window after start-up.
   if (process.env.CARET_SCREENSHOT) {
     win.webContents.on('console-message', (_e, level, message) => { if (level >= 2) console.log('[renderer]', message); });
@@ -197,6 +198,7 @@ function registerIpc() {
   });
   handle('fs:list', p => ws.listDir(p));
   handle('fs:read', p => ws.readFile(p));
+  handle('fs:readImage', p => ws.readImage(p));
   handle('fs:write', (p, c) => ws.writeFile(p, c).then(r => ({ path: r.path })));
   handle('fs:create', (p, isDir) => ws.createEntry(p, !!isDir));
   handle('fs:rename', (a, b) => ws.renameEntry(a, b));

@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('caret', {
     current: call('workspace:current'), close: call('workspace:close'),
   },
   fs: {
-    list: call('fs:list'), read: call('fs:read'), write: call('fs:write'), create: call('fs:create'),
+    list: call('fs:list'), read: call('fs:read'), readImage: call('fs:readImage'), write: call('fs:write'), create: call('fs:create'),
     rename: call('fs:rename'), remove: call('fs:delete'), search: call('fs:search'), reveal: call('fs:reveal'),
     onChanged: listen('fs:changed'),
   },

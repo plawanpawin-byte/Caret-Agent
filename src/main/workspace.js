@@ -72,6 +72,17 @@ async function readFile(p, limit = MAX_READ) {
   return buf.toString('utf8');
 }
 
+// Pictures open in the editor as a preview. Returns a data URL (the page can only show data: and caret: images).
+const IMAGE_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', ico: 'image/x-icon', bmp: 'image/bmp', svg: 'image/svg+xml' };
+async function readImage(p) {
+  const abs = resolveSafe(p);
+  const mime = IMAGE_TYPES[path.extname(abs).slice(1).toLowerCase()];
+  if (!mime) throw new Error(`${p} is not a picture`);
+  const st = await fsp.stat(abs);
+  if (st.size > 15 * 1024 * 1024) throw new Error(`${p} is too large to preview (${Math.round(st.size / 1048576)} MB)`);
+  return { url: `data:${mime};base64,${(await fsp.readFile(abs)).toString('base64')}`, size: st.size };
+}
+
 async function writeFile(p, content) {
   if (typeof content !== 'string') throw new Error('Content must be text');
   if (Buffer.byteLength(content) > MAX_WRITE) throw new Error('File is too large to write');
@@ -184,4 +195,4 @@ function cloneRepo(url, parentDir) {
   });
 }
 
-module.exports = { setRoot, getRoot, closeRoot, resolveSafe, listDir, readFile, writeFile, writeBinary, createEntry, renameEntry, deleteEntry, search, overview, cloneRepo, rel };
+module.exports = { setRoot, getRoot, closeRoot, resolveSafe, listDir, readFile, readImage, writeFile, writeBinary, createEntry, renameEntry, deleteEntry, search, overview, cloneRepo, rel };
