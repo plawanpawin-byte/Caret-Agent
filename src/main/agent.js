@@ -295,6 +295,19 @@ function friendlyError(e, label) {
   return m;
 }
 
+// A long agent run piles up file contents and command output. When the conversation outgrows what the model can hold,
+// shrink the oldest tool results first so the instructions and the latest steps are never the part that gets cut off.
+function compactMessages(messages, budget) {
+  const size = () => messages.reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length : 0) + (m.tool_calls ? JSON.stringify(m.tool_calls).length : 0), 0);
+  if (size() <= budget) return false;
+  const tools = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter(i => i >= 0);
+  for (const i of tools.slice(0, -4)) {            // keep the four most recent results intact
+    if (messages[i].content.length > 300) messages[i] = { ...messages[i], content: messages[i].content.slice(0, 200) + '\n[older output shortened to save space]' };
+    if (size() <= budget) return true;
+  }
+  return size() <= budget;
+}
+
 async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }) {
   const s = settings.load();
   const system = prompt.build({ mode: run.mode, permission: run.permission, ctx, overview });
@@ -303,10 +316,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   messages.push({ role: 'user', content: text || 'See the attached image.', images: attachments.map(a => ({ mime: a.mime, b64: a.b64 })) });
 
   let transport;
+  let budget = 400000; // characters the conversation may use; local models get far less
   if (pick.provider === 'ollama') {
     const cat = await models.catalog({ mode: run.mode }).catch(() => null);
     const info = cat?.providers.find(p => p.id === 'ollama')?.models.find(m => m.id === pick.model);
     const numCtx = Math.max(8192, Math.min(info?.ctx || 16384, 32768));
+    budget = Math.floor(numCtx * 2.6); // about 4 characters per token, with room left for the answer
     transport = (msgs, tl) => llm.ollamaChat({ base: models.OLLAMA, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal, numCtx, think: !!info?.thinking && run.mode === 'plan' });
   } else {
     const base = pick.provider === 'lmstudio' ? s.endpoints.lmstudio : pick.provider === 'llamacpp' ? s.endpoints.llamacpp : models.CLOUD_APIS[pick.provider]?.base;
@@ -319,6 +334,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   let toolsOn = defs.length > 0;
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
+    compactMessages(messages, budget);
     let content = '';
     let calls = null;
     try {
@@ -358,7 +374,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
           catch (e) { result = `Error: ${e.message}`; on.tool({ id: call.id, status: 'error', result: e.message }); }
         }
       }
-      messages.push({ role: 'tool', tool_call_id: call.id, name, content: String(result).slice(0, 40000) });
+      messages.push({ role: 'tool', tool_call_id: call.id, name, content: String(result).slice(0, Math.min(40000, Math.floor(budget / 4))) });
     }
   }
   on.text(`\n\n_Reached the step limit for ${run.mode} mode. Say "continue" to keep going._`);
@@ -366,4 +382,4 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
 
 function shutdown() { for (const id of running.keys()) stop(id); bridge?.then(b => b.server.close(), () => {}); }
 
-module.exports = { init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };
+module.exports = { compactMessages, init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };

@@ -162,6 +162,24 @@ async function t(name, fn) {
     terminals.close(id);
   });
 
+  await t('long agent runs: old tool output shrinks first, instructions and latest steps stay whole', async () => {
+    const { compactMessages } = require('../src/main/agent');
+    const big = 'x'.repeat(5000);
+    const messages = [{ role: 'system', content: 'SYSTEM RULES' }, { role: 'user', content: 'do the task' }];
+    for (let i = 0; i < 10; i++) { messages.push({ role: 'assistant', content: '', tool_calls: [{ id: 'c' + i, function: { name: 'read_file', arguments: '{}' } }] }); messages.push({ role: 'tool', tool_call_id: 'c' + i, name: 'read_file', content: big }); }
+    const before = messages.reduce((n, m) => n + (m.content || '').length, 0);
+    assert.ok(before > 50000);
+    assert.strictEqual(compactMessages(messages, 30000), true);
+    const after = messages.reduce((n, m) => n + (m.content || '').length, 0);
+    assert.ok(after < before);
+    assert.strictEqual(messages[0].content, 'SYSTEM RULES');
+    const toolMsgs = messages.filter(m => m.role === 'tool');
+    assert.strictEqual(toolMsgs[toolMsgs.length - 1].content, big, 'the newest result is untouched');
+    assert.ok(/shortened/.test(toolMsgs[0].content), 'the oldest result was shortened');
+    const small = [{ role: 'system', content: 's' }, { role: 'tool', content: big }];
+    assert.strictEqual(compactMessages(small, 100000), false, 'nothing to do under budget');
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();
