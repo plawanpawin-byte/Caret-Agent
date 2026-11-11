@@ -102,7 +102,7 @@ function renderModels(list, cat) {
     }
   }
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: `Auto will use: ${cat.auto.key ? cat.auto.key.split(':').slice(1).join(':') : 'nothing yet'}. ${cat.auto.reason}` }));
-  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Grok, Gemini and ChatGPT can be connected with your own key in Settings.' }));
+  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Install Claude Code or Codex, or connect Grok, Gemini and ChatGPT, any time from the AI icon in the side bar.' }));
   list.replaceChildren(...rows);
 }
 
