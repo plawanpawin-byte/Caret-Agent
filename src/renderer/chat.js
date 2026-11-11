@@ -190,7 +190,11 @@ export function createChat() {
     const box = h('div', { class: 'msg assistant' });
     for (const p of item.parts || []) { const n = renderPart(p); if (n) box.append(n); }
     if (isLast && c.running) box.append(h('div', { class: 'working', text: (item.parts || []).length ? 'Working…' : `Starting ${item.model ? modelLabel(item.model) : ''}…` }));
-    if (!c.running && item.model) box.append(h('div', { class: 'msg-meta', text: modelLabel(item.model) }));
+    if (!c.running && item.model) {
+      const answer = (item.parts || []).filter(p => p.type === 'text').map(p => p.text).join('').trim();
+      const copy = answer ? h('button', { class: 'msg-copy', title: 'Copy answer', onclick: e => { navigator.clipboard.writeText(answer); const b = e.currentTarget; b.textContent = 'Copied'; setTimeout(() => { b.replaceChildren(icon('copy'), 'Copy'); }, 1200); } }, icon('copy'), 'Copy') : null;
+      box.append(h('div', { class: 'msg-meta' }, h('span', { text: modelLabel(item.model) }), copy));
+    }
     return box;
   }
 

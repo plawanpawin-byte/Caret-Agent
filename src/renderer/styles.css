@@ -590,3 +590,9 @@ a:hover { text-decoration: underline; }
   .watermark .title { margin-bottom: 12px; }
   .shortcut .kbd { display: none; }
 }
+/* Copy the whole answer */
+.msg.assistant .msg-meta { display: flex; align-items: center; gap: 10px; }
+.msg-copy { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border: 0; border-radius: 4px; background: none; color: var(--faint); font-size: 11px; opacity: 0; }
+.msg-copy svg { width: 12px; height: 12px; }
+.msg.assistant:hover .msg-copy, .msg-copy:focus-visible { opacity: 1; }
+.msg-copy:hover { background: var(--hover); color: var(--text-hi); }
