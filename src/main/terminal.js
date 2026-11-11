@@ -83,6 +83,7 @@ class Terminals extends EventEmitter {
         for (const line of lines) {
           const m = line.indexOf(MARK);
           if (m >= 0) { s.cwd = line.slice(m + MARK.length).trim() || s.cwd; continue; }
+          if (/^At .*caret-run-[^\/]*\.ps1:\d+ char:\d+/.test(line)) continue; // our wrapper script's location means nothing to the user
           kept.push(line);
         }
         const clean = kept.join('\n');
