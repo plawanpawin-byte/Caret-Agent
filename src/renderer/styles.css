@@ -529,3 +529,6 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .approval .head .ttl { min-width: 0; overflow-wrap: anywhere; font-weight: 400; color: var(--muted); }
 .approval .head .ttl b { font-weight: 600; color: var(--text-hi); margin-right: 6px; }
 .approval .head .ttl .tgt { font-family: var(--mono); font-size: 12px; color: var(--text-hi); }
+/* Links are never the browser default dark blue. */
+a { color: #7db4f0; text-decoration: none; cursor: pointer; }
+a:hover { text-decoration: underline; }
