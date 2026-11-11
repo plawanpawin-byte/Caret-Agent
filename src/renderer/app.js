@@ -48,7 +48,7 @@ async function boot() {
   const activityItems = {
     explorer: h('button', { class: 'icon-btn on', title: 'Explorer (Ctrl+Shift+E)', onclick: () => goSide('explorer') }, icon('files')),
     search: h('button', { class: 'icon-btn', title: 'Search (Ctrl+Shift+F)', onclick: () => goSide('search') }, icon('search')),
-    providers: h('button', { class: 'icon-btn', title: 'AI providers — install and connect', onclick: () => goSide('providers') }, icon('extensions')),
+    providers: h('button', { class: 'icon-btn', title: 'AI providers (Ctrl+Shift+X)', onclick: () => goSide('providers') }, icon('extensions')),
   };
   function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which, true); }
   const actAgent = h('button', { class: 'icon-btn', title: 'Agent view (chat first)', onclick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') }, icon('agent'));
@@ -230,6 +230,7 @@ async function boot() {
     else if (k === ',') { e.preventDefault(); openSettings(); }
     else if (k === 'f' && e.shiftKey) { e.preventDefault(); goSide('search'); }
     else if (k === 'e' && e.shiftKey) { e.preventDefault(); goSide('explorer'); }
+    else if (k === 'x' && e.shiftKey) { e.preventDefault(); goSide('providers'); }
   });
   // Dropping files onto the window must never navigate away.
   addEventListener('dragover', e => e.preventDefault());
