@@ -81,7 +81,7 @@ An AI that can edit files and run commands has to be treated as untrusted. Caret
 - Claude's tool requests go through a local, token-protected channel so your permission setting applies to it too.
 - Cloning only accepts `https://` and `git@` addresses and cannot be turned into a git option.
 
-These rules are covered by automated checks (`npm run check`) that try path escapes, links, `.git` writes, command patterns and hostile clone addresses.
+These rules are covered by automated checks that try path escapes, links, `.git` writes, command patterns and hostile clone addresses.
 
 ## Status
 
