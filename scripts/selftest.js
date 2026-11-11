@@ -8,7 +8,8 @@ const path = require('path');
 const ws = require('../src/main/workspace');
 const permissions = require('../src/main/permissions');
 const { ensureFavicon } = require('../src/main/tools');
-const { thinkSplitter } = require('../src/main/llm');
+const { thinkSplitter, openaiChat } = require('../src/main/llm');
+const http = require('http');
 
 let pass = 0;
 async function t(name, fn) {
@@ -73,6 +74,37 @@ async function t(name, fn) {
   for (const bad of ['--upload-pack=touch /tmp/x', 'ext::sh -c touch% /tmp/pwned', 'file:///etc', 'https://github.com/a/b;rm -rf /', '-c core.sshCommand=x']) {
     await t(`clone refuses ${bad.slice(0, 24)}`, () => ws.cloneRepo(bad, base).then(() => { throw new Error('accepted'); }, e => assert.ok(/https:\/\/|git@/.test(e.message))));
   }
+
+  // OpenAI-compatible servers (LM Studio, llama.cpp, Grok, Gemini, OpenAI): a mock that streams text and a tool call in fragments.
+  await t('openai-compatible stream: text, split tool call, key sent, error surfaced', async () => {
+    let seen = null;
+    const srv = http.createServer((req, res) => {
+      let b = ''; req.on('data', d => { b += d; });
+      req.on('end', () => {
+        seen = { url: req.url, auth: req.headers.authorization, body: JSON.parse(b) };
+        if (seen.body.model === 'bad') { res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'Invalid key' } })); return; }
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        const send = o => res.write('data: ' + JSON.stringify(o) + '\n\n');
+        send({ choices: [{ delta: { content: 'Hel' } }] });
+        send({ choices: [{ delta: { content: 'lo <think>hm</think>' } }] });
+        send({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', function: { name: 'write_file', arguments: '{"path":"a.t' } }] } }] });
+        send({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'xt","content":"hi"}' } }] } }] });
+        res.end('data: [DONE]\n\n');
+      });
+    });
+    await new Promise(r => srv.listen(0, '127.0.0.1', r));
+    const base = `http://127.0.0.1:${srv.address().port}/v1`;
+    try {
+      const ev = []; for await (const e of openaiChat({ base, key: 'sk-test', model: 'm', messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'function', function: { name: 'write_file', parameters: { type: 'object' } } }] })) ev.push(e);
+      assert.strictEqual(seen.url, '/v1/chat/completions'); assert.strictEqual(seen.auth, 'Bearer sk-test'); assert.strictEqual(seen.body.stream, true);
+      assert.strictEqual(ev.filter(e => e.type === 'text').map(e => e.text).join(''), 'Hello ');
+      assert.strictEqual(ev.filter(e => e.type === 'thinking').map(e => e.text).join(''), 'hm');
+      const calls = ev.find(e => e.type === 'tool_calls').calls;
+      assert.strictEqual(calls.length, 1); assert.strictEqual(calls[0].function.name, 'write_file');
+      assert.deepStrictEqual(JSON.parse(calls[0].function.arguments), { path: 'a.txt', content: 'hi' });
+      await assert.rejects(async () => { for await (const _ of openaiChat({ base, key: 'x', model: 'bad', messages: [] })); }, /401: Invalid key/);
+    } finally { srv.close(); }
+  });
 
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
