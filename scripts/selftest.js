@@ -106,6 +106,19 @@ async function t(name, fn) {
     } finally { srv.close(); }
   });
 
+  // The "AI" panel installs only what is in its fixed list, and shows command output as it arrives.
+  await t('providers: install runs only listed packages; output streams; failures reported', async () => {
+    const providers = require('../src/main/providers');
+    await assert.rejects(() => providers.install('not-a-provider', () => {}), /cannot be installed/);
+    await assert.rejects(() => providers.install('xai', () => {}), /cannot be installed/);
+    const lines = [];
+    const ok = await providers.stream(process.execPath, ['-e', 'console.log("one"); console.error("\u001b[31mtwo\u001b[0m")'], l => lines.push(l), 10000);
+    assert.strictEqual(ok.ok, true); assert.deepStrictEqual(lines.sort(), ['one', 'two']);
+    const bad = await providers.stream(process.execPath, ['-e', 'process.exit(3)'], () => {}, 10000);
+    assert.strictEqual(bad.ok, false); assert.match(bad.error, /code 3/);
+    assert.ok(require('../src/main/cli').resolveNpm(), 'npm should be found on a machine with Node');
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();

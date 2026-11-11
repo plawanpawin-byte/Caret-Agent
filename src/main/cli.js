@@ -76,6 +76,20 @@ function unwrapShim(shim) {
   return { cmd: process.execPath, args: [js], env: { ELECTRON_RUN_AS_NODE: '1' } };
 }
 
+// npm ships as npm.cmd on Windows (a different shim from the ones other tools
+// create), so find its JavaScript entry next to it and run that with Node.
+function resolveNpm() {
+  const found = which('npm');
+  if (!found) return null;
+  const dir = path.dirname(found);
+  const js = path.join(dir, 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  if (fs.existsSync(js)) {
+    const node = fs.existsSync(path.join(dir, 'node.exe')) ? path.join(dir, 'node.exe') : which('node');
+    return node ? { cmd: node, args: [js] } : { cmd: process.execPath, args: [js], env: { ELECTRON_RUN_AS_NODE: '1' } };
+  }
+  return IS_WIN ? resolveCli('npm') : { cmd: found, args: [] };
+}
+
 function findOllama() {
   const r = resolveCli('ollama');
   if (r) return r.cmd;
@@ -87,4 +101,4 @@ function findOllama() {
 
 function clearCache() { cache.clear(); }
 
-module.exports = { fixPath, which, resolveCli, findOllama, clearCache, IS_WIN };
+module.exports = { fixPath, which, resolveCli, resolveNpm, findOllama, clearCache, IS_WIN };

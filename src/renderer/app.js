@@ -5,6 +5,7 @@ import { createEditorArea } from './editor.js';
 import { createTerminalPanel } from './terminal.js';
 import { createChat } from './chat.js';
 import { onboarding, openSettings, cloneDialog } from './dialogs.js';
+import { createProviders } from './providers.js';
 
 const $ = id => document.getElementById(id);
 const store = { get: (k, d) => { try { const v = localStorage.getItem('caret.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem('caret.' + k, JSON.stringify(v)); } catch {} } };
@@ -19,6 +20,8 @@ async function boot() {
   const terminal = createTerminalPanel();
   const chat = createChat();
   const search = createSearch();
+  const providersPanel = createProviders();
+  let side = 'explorer';
 
   // ---------- title bar ----------
   const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
@@ -45,6 +48,7 @@ async function boot() {
   const activityItems = {
     explorer: h('button', { class: 'icon-btn on', title: 'Explorer (Ctrl+Shift+E)', onclick: () => goSide('explorer') }, icon('files')),
     search: h('button', { class: 'icon-btn', title: 'Search (Ctrl+Shift+F)', onclick: () => goSide('search') }, icon('search')),
+    providers: h('button', { class: 'icon-btn', title: 'AI providers — install and connect', onclick: () => goSide('providers') }, icon('extensions')),
   };
   function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which, true); }
   const actAgent = h('button', { class: 'icon-btn', title: 'Agent view (chat first)', onclick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') }, icon('agent'));
@@ -56,8 +60,8 @@ async function boot() {
     { label: 'Settings', icon: 'settings', sub: 'Ctrl+,', onClick: () => openSettings() },
   ]) }, icon('down'));
   // One row of tools at the top of the side panel (no separate left rail).
-  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, actAgent, h('span', { class: 'grow' }), actMore);
-  $('sidebar').append(toolRow, explorer.el, search.el);
+  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, activityItems.providers, actAgent, actMore);
+  $('sidebar').append(toolRow, explorer.el, search.el, providersPanel.el);
   $('editor-area').append(editorArea.el);
   $('bottom').append(terminal.el);
 
@@ -67,9 +71,13 @@ async function boot() {
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', k === which);
     explorer.el.classList.toggle('hidden', which !== 'explorer');
     search.el.classList.toggle('hidden', which !== 'search');
+    providersPanel.el.classList.toggle('hidden', which !== 'providers');
+    side = which;
     if (which === 'search') search.focus();
+    if (which === 'providers') providersPanel.load();
   }
   search.el.classList.add('hidden');
+  providersPanel.el.classList.add('hidden');
 
   // ---------- agent layout ----------
   const sessionList = h('div', { class: 'col', style: { overflowY: 'auto', flex: 1 } });
@@ -101,7 +109,7 @@ async function boot() {
     $('studio').classList.toggle('hidden', l !== 'studio');
     $('agentview').classList.toggle('hidden', l !== 'agent');
     actAgent.classList.toggle('on', l === 'agent');
-    const which = search.el.classList.contains('hidden') ? 'explorer' : 'search';
+    const which = side;
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
     if (l === 'agent') $('sessions').prepend(toolRow); else $('sidebar').prepend(toolRow);
     if (l === 'agent') {

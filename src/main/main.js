@@ -5,12 +5,15 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 
 const cli = require('./cli');
+// Test hook: CARET_SIZE=900x600 opens the window at that size (never set in normal use).
+const TEST_SIZE = String(process.env.CARET_SIZE || '').split('x').map(Number).filter(n => n > 0);
 cli.fixPath();
 const settings = require('./settings');
 const ws = require('./workspace');
 const memory = require('./memory');
 const terminals = require('./terminal');
 const models = require('./models');
+const providers = require('./providers');
 const agent = require('./agent');
 
 const SCHEME = 'caret';
@@ -64,7 +67,7 @@ async function serveFile(base, rel) {
 function createWindow() {
   const isMac = process.platform === 'darwin';
   win = new BrowserWindow({
-    width: 1440, height: 900, minWidth: 900, minHeight: 560,
+    width: TEST_SIZE[0] || 1440, height: TEST_SIZE[1] || 900, minWidth: 900, minHeight: 560,
     backgroundColor: '#181818',
     title: 'Caret Agent',
     icon: path.join(APP_ROOT, 'resources', 'icon.png'),
@@ -207,6 +210,9 @@ function registerIpc() {
   handle('term:kill', id => terminals.kill(id));
   handle('term:close', id => terminals.close(id));
 
+  handle('providers:status', () => providers.status());
+  handle('providers:install', id => providers.install(String(id), line => send('providers:progress', { id: String(id), line })).then(() => { models.catalog().catch(() => {}); return true; }));
+  handle('providers:signIn', id => providers.signIn(String(id), line => send('providers:progress', { id: String(id), line })));
   handle('models:catalog', opts => models.catalog(opts || {}));
   handle('models:hardware', () => models.hardware());
 

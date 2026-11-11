@@ -539,3 +539,33 @@ a:hover { text-decoration: underline; }
 .tree-empty { display: flex; flex-direction: column; gap: 8px; padding: 14px 12px; }
 .tree-empty p { margin: 0 0 4px; color: var(--muted); }
 .tree-empty .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 30px; }
+
+/* ---- v6: compact centred tool row + AI providers panel ---- */
+.toolrow { justify-content: center; gap: 10px; height: 36px; padding: 0 6px; }
+.toolrow .icon-btn { width: 30px; height: 26px; }
+.toolrow .icon-btn svg { width: 17px; height: 17px; }
+.toolrow .icon-btn.on::after { left: 6px; right: 6px; bottom: -4px; }
+.prov-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 0 12px; }
+.prov-sec { display: flex; align-items: center; padding: 10px 12px 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.prov-count { min-width: 18px; padding: 0 6px; height: 16px; line-height: 16px; text-align: center; border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 11px; letter-spacing: 0; }
+.prov { display: flex; gap: 10px; padding: 10px 12px; border-top: 1px solid transparent; }
+.prov:hover { background: var(--hover); }
+.prov-ico { width: 36px; height: 36px; flex: none; border-radius: 8px; background: #101010; border: 1px solid var(--border-strong); display: grid; place-items: center; font-weight: 700; font-size: 16px; }
+.prov-main { min-width: 0; flex: 1; }
+.prov-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.prov-name { font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prov-by { color: var(--faint); font-size: 11.5px; white-space: nowrap; }
+.prov-blurb { color: var(--muted); font-size: 12px; line-height: 1.4; margin: 2px 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.prov-row { display: flex; align-items: center; gap: 10px; min-height: 24px; }
+.prov-state { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); min-width: 0; }
+.prov-state .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; flex: none; }
+.prov-state .dot.ok { background: #6bbf86; } .prov-state .dot.warn { background: var(--warn, #e0a046); } .prov-state .dot.busy { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+.btn.small { height: 24px; padding: 0 10px; font-size: 12px; gap: 5px; }
+.btn.small svg { width: 13px; height: 13px; }
+.btn:disabled { opacity: .5; pointer-events: none; }
+.prov-log { margin-top: 6px; font-size: 11px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prov-extra { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.prov-extra code { display: block; padding: 6px 8px; background: #111; border: 1px solid var(--border); border-radius: var(--radius); font: 11.5px/1.4 var(--mono); color: var(--text-hi); word-break: break-all; }
+.prov-btns { display: flex; align-items: center; gap: 6px; }
+.prov-btns a { margin-left: auto; font-size: 12px; }
+@keyframes pulse { 50% { opacity: .35; } }

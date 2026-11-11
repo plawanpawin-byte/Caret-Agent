@@ -29,6 +29,9 @@ Claude, Codex, Grok, Gemini or a model running on your own machine — they all 
 **Free local models, picked for you**
 Already have Ollama, LM Studio or llama.cpp? Caret Agent finds your models and chooses the best one for the task and your hardware: it checks GPU and RAM, whether the model can use tools, whether it can see images, and how big it is. Nothing to configure and nothing to upgrade — there is no paid tier.
 
+**Set up any AI from one panel**
+The AI icon in the side bar lists every AI Caret Agent can use and what is ready. Claude Code and Codex install with one click and sign in through your browser; Grok, Gemini and ChatGPT connect with an API key; Ollama, LM Studio and llama.cpp show up as soon as they are on your computer.
+
 **You decide how much the AI may do**
 - **Ask first** — every edit and every command waits for your OK, with a preview of what will change.
 - **Decide for me** — normal edits and commands just run. Deleting things, pushing code, installing globally, reaching other machines, or touching files outside the project still asks.
