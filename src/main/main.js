@@ -98,6 +98,14 @@ function createWindow() {
       console.log('screenshot saved');
     }, Number(process.env.CARET_SCREENSHOT_DELAY || 5000)));
   }
+  // Zoom (Ctrl +, Ctrl -, Ctrl 0): the app has no menu bar on Windows and Linux, so the usual shortcuts need to be handled here.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || !(input.control || input.meta) || input.alt) return;
+    const wc = win.webContents;
+    if (input.key === '=' || input.key === '+') { wc.setZoomLevel(Math.min(3, wc.getZoomLevel() + 0.5)); event.preventDefault(); }
+    else if (input.key === '-' || input.key === '_') { wc.setZoomLevel(Math.max(-3, wc.getZoomLevel() - 0.5)); event.preventDefault(); }
+    else if (input.key === '0') { wc.setZoomLevel(0); event.preventDefault(); }
+  });
   win.loadURL(`${SCHEME}://app/index.html`);
 
   // The app window never navigates away or opens other windows.
