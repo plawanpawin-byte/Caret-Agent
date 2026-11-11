@@ -535,3 +535,7 @@ a:hover { text-decoration: underline; }
 /* Search results */
 .hit-line { font: 11.5px/1.5 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .hit-line .hit { color: #fff; background: rgba(224,160,70,.28); border-radius: 2px; }
+/* Explorer with no folder */
+.tree-empty { display: flex; flex-direction: column; gap: 8px; padding: 14px 12px; }
+.tree-empty p { margin: 0 0 4px; color: var(--muted); }
+.tree-empty .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 30px; }

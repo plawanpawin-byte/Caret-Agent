@@ -46,7 +46,13 @@ export function createExplorer({ title = 'Explorer', onOpen } = {}) {
   let renderSeq = 0;
   async function render() {
     const seq = ++renderSeq;
-    if (!state.workspace) { tree.replaceChildren(); return; }
+    if (!state.workspace) {
+      tree.replaceChildren(h('div', { class: 'tree-empty' },
+        h('p', { text: 'You have not opened a folder yet.' }),
+        h('button', { class: 'btn primary', onclick: () => emit('cmd', 'open-folder') }, icon('folderOpen'), 'Open Folder'),
+        h('button', { class: 'btn', onclick: () => emit('cmd', 'clone') }, icon('git'), 'Clone Repository')));
+      return;
+    }
     head.querySelector('.grow').textContent = state.workspace.name;
     const frag = document.createDocumentFragment();
     await renderDir('.', 0, frag);
