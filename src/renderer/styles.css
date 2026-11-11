@@ -577,3 +577,7 @@ a:hover { text-decoration: underline; }
 .img-stage { position: relative; display: block; padding: 0; overflow: hidden; }
 .img-stage img { position: absolute; inset: 24px; width: calc(100% - 48px); height: calc(100% - 48px); object-fit: scale-down; image-rendering: auto; }
 .img-info { flex: none; padding: 6px 14px; font: 12px var(--mono); color: var(--muted); border-top: 1px solid var(--border); background: var(--panel); }
+/* Tables in chat: scroll sideways instead of squeezing numbers into one character per line */
+.md table { display: block; max-width: 100%; overflow-x: auto; }
+.md th, .md td { min-width: 56px; text-align: left; vertical-align: top; overflow-wrap: break-word; word-break: normal; }
+.md td:last-child, .md th:last-child { min-width: 120px; }
