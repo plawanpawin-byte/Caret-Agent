@@ -82,7 +82,7 @@ export function onboarding() {
 function renderModels(list, cat) {
   if (!cat) { list.replaceChildren(h('div', { class: 'muted', text: 'Could not check for models.' })); return; }
   const hw = cat.hardware;
-  const rows = [h('div', { class: 'model-line' }, icon('cpu'), h('span', { class: 'grow' },
+  const rows = [h('div', { class: 'model-line' }, icon('laptop'), h('span', { class: 'grow' },
     h('div', { class: 'n', text: 'This computer' }),
     h('div', { class: 's', text: `${Math.round(hw.ramGB)} GB memory${hw.gpu ? ` · ${hw.gpu}${hw.vramGB ? ` (${Math.round(hw.vramGB)} GB)` : ''}` : ' · no dedicated GPU found'}` })))];
   for (const p of cat.providers) {
@@ -94,7 +94,7 @@ function renderModels(list, cat) {
         continue;
       }
       const best = p.models[0];
-      rows.push(h('div', { class: 'model-line' }, icon('cpu'), h('span', { class: 'grow' },
+      rows.push(h('div', { class: 'model-line' }, icon('laptop'), h('span', { class: 'grow' },
         h('div', { class: 'n', text: `${p.name} — ${p.models.length} model${p.models.length > 1 ? 's' : ''}` }),
         h('div', { class: 's', text: best ? `Best fit: ${best.id} (${(best.why || []).join(' · ')})` : '' })), h('span', { class: 'status-ok', text: 'Ready' })));
     } else if (p.kind === 'cli') {

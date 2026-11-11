@@ -23,7 +23,7 @@ async function boot() {
   // ---------- title bar ----------
   const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
   $('titlebar').append(
-    h('div', { class: 'brand', title: 'Caret Agent' }, logo(22)),
+    h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
     omni, h('div', { class: 'spacer' }),
     h('div', { class: 'tools' },
       h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),

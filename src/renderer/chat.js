@@ -316,7 +316,7 @@ export function createChat() {
     ctxBtn.classList.toggle('on', useCodebase);
     permBtn.className = 'pill perm-' + (s.permission || 'ask');
     permBtn.replaceChildren(icon(p.icon), h('span', { text: p.label }), icon('down', 'caret-down'));
-    modelBtn.replaceChildren(icon(s.model && s.model !== 'auto' && /^(ollama|lmstudio|llamacpp):/.test(s.model) ? 'cpu' : s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
+    modelBtn.replaceChildren(icon(s.model && s.model !== 'auto' && /^(ollama|lmstudio|llamacpp):/.test(s.model) ? 'laptop' : s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
       h('span', { text: s.model && s.model !== 'auto' ? modelLabel(s.model) : 'Auto' }), icon('down', 'caret-down'));
     const c = chats.get(activeId);
     const busy = !!c?.running;
@@ -358,7 +358,7 @@ export function createChat() {
           if (m.tools) tags.push({ text: 'can edit files', good: true });
           if (m.vision) tags.push({ text: 'sees images' });
         }
-        items.push({ label: m.label || m.id, tags, sub: p.kind === 'local' ? (m.why || []).join(' · ') : null, icon: p.kind === 'local' ? 'cpu' : 'cloud', checked: cur === m.key, disabled: false, onClick: () => { if (tooBig) toast(`${m.id} is larger than this computer can run well — it may be very slow.`); pick(m.key); } });
+        items.push({ label: m.label || m.id, tags, sub: p.kind === 'local' ? (m.why || []).join(' · ') : null, icon: p.kind === 'local' ? 'laptop' : 'cloud', checked: cur === m.key, disabled: false, onClick: () => { if (tooBig) toast(`${m.id} is larger than this computer can run well — it may be very slow.`); pick(m.key); } });
       }
     }
     items.push('sep', { label: 'Connect Grok, Gemini or ChatGPT…', icon: 'link', onClick: () => emit('cmd', 'settings-models') });
