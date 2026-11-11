@@ -18,7 +18,7 @@ app.whenReady().then(async () => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'caret-proj-'));
   ws.setRoot(proj);
   const events = [];
-  agent.init({ emit: ev => { events.push(ev); if (ev.type === 'tool' && ev.part.status !== 'running') log('tool', ev.part.name, ev.part.status, JSON.stringify(ev.part.args).slice(0, 90)); if (ev.type === 'approval') { const ok = ['write_file', 'edit_file'].includes(ev.tool); log('approval requested:', ev.tool, ok ? '-> allowed' : '-> DENIED (test only allows file writes)'); require('../src/main/agent').answerApproval(ev.reqId, ok ? 'allow' : 'deny'); } if (ev.type === 'error') log('ERROR', ev.text); }, openPreview: u => log('preview', u), onFileChanged: () => {} });
+  agent.init({ emit: ev => { events.push(ev); if (ev.type === 'tool' && ev.part.status !== 'running') log('tool', ev.part.name, ev.part.status, JSON.stringify(ev.part.args).slice(0, 90), ev.part.status === 'error' ? '=> ' + String(ev.part.result || '').slice(0, 200) : ''); if (ev.type === 'approval') { const ok = ['write_file', 'edit_file', 'Write', 'Edit', 'MultiEdit'].includes(ev.tool); log('approval requested:', ev.tool, ok ? '-> allowed' : '-> DENIED (test only allows file writes)'); require('../src/main/agent').answerApproval(ev.reqId, ok ? 'allow' : 'deny'); } if (ev.type === 'error') log('ERROR', ev.text); }, openPreview: u => log('preview', u), onFileChanged: () => {} });
   agent.loadTabs();
   const tab = agent.newTab();
   const model = process.env.E2E_MODEL; const mode = process.env.E2E_MODE || 'code'; const perm = process.env.E2E_PERM || 'ask'; // safe by default: files only, commands are denied

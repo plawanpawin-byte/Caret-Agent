@@ -102,8 +102,8 @@ async function gate(run, tool, args) {
 
 // Local bridge so Claude Code's tool requests go through the same gate.
 let bridge = null;
-function startBridge() {
-  if (bridge) return bridge;
+function startBridge() { return bridge || (bridge = makeBridge().catch(e => { bridge = null; throw e; })); }
+async function makeBridge() {
   const token = crypto.randomBytes(24).toString('hex');
   const server = http.createServer((req, res) => {
     const given = Buffer.from(String(req.headers['x-caret-token'] || ''));
@@ -122,9 +122,8 @@ function startBridge() {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(out));
     });
   });
-  server.listen(0, '127.0.0.1');
-  bridge = { server, token, get port() { return server.address()?.port; } };
-  return bridge;
+  await new Promise((res, rej) => { server.once('error', rej); server.listen(0, '127.0.0.1', res); });
+  return { server, token, port: server.address().port };
 }
 
 // ---------- running ----------
@@ -237,7 +236,7 @@ async function send({ tabId, text, images, mode, permission, model }) {
       // Switching to Claude mid-chat: give it the conversation so far.
       const resume = tab.lastProvider === 'claude' ? tab.claudeSession : null;
       if (!resume && tab.history.length) userText = recentHistory(tab) + '\n\nNEW REQUEST:\n' + text;
-      const h = runners.runClaude({ tabId, model: pick.model, mode, permission, prompt: userText, system, sessionId: resume, bridge: startBridge(), images: attachments.map(a => a.path), on });
+      const h = runners.runClaude({ tabId, model: pick.model, mode, permission, prompt: userText, system, sessionId: resume, bridge: await startBridge(), images: attachments.map(a => a.path), on });
       run.stopCli = h.stop;
       const r = await h.done;
       if (r.sessionId) tab.claudeSession = r.sessionId;
@@ -359,6 +358,6 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   on.text(`\n\n_Reached the step limit for ${run.mode} mode. Say "continue" to keep going._`);
 }
 
-function shutdown() { for (const id of running.keys()) stop(id); bridge?.server.close(); }
+function shutdown() { for (const id of running.keys()) stop(id); bridge?.then(b => b.server.close(), () => {}); }
 
 module.exports = { init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };
