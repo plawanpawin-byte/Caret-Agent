@@ -334,6 +334,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   let toolsOn = defs.length > 0;
   let saidSomething = false; // has the model written any text during this run?
   let nudged = false;        // we ask a silent model to carry on at most once
+  let badCalls = 0;          // times a model wrote a tool call that could not be parsed
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
     compactMessages(messages, budget);
@@ -353,6 +354,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         toolsOn = false;
         on.text(`_${pick.model} cannot use tools, so it can only answer — it cannot edit files. Choose a model marked "can edit files" for changes._\n\n`);
         step--; continue;
+      }
+      // A small model sometimes writes a tool call the server cannot parse (broken XML/JSON). Ask it to try again instead of failing the whole run.
+      if (toolsOn && badCalls < 2 && /syntax error|error parsing tool call|invalid character|unexpected end of JSON|unmarshal/i.test(e.message)) {
+        badCalls++;
+        messages.push({ role: 'user', content: 'Your last tool call was malformed and could not be read. Call the tool again with simple, valid arguments. For a long file, use write_file in one piece, or make smaller edit_file changes.' });
+        continue;
       }
       throw e;
     }
