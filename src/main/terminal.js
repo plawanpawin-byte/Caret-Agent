@@ -4,6 +4,9 @@
 const { spawn, execFile } = require('child_process');
 const { EventEmitter } = require('events');
 const fs = require('fs');
+const os = require('os');
+const { StringDecoder } = require('string_decoder');
+const path = require('path');
 
 const IS_WIN = process.platform === 'win32';
 const MARK = '__CARET_CWD__';
@@ -29,9 +32,15 @@ class Terminals extends EventEmitter {
       const script = `[Console]::OutputEncoding=[Text.Encoding]::UTF8; $ProgressPreference='SilentlyContinue'\n` +
         `try {\n${command}\n} finally { [Console]::Out.Write("\`n${MARK}" + (Get-Location).ProviderPath + "\`n") }\n` +
         `if ($LASTEXITCODE) { exit $LASTEXITCODE }`;
-      const encoded = Buffer.from(script, 'utf16le').toString('base64');
-      return spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded],
+      // A script file (UTF-8 with BOM) keeps non-English text intact and, unlike -EncodedCommand,
+      // makes PowerShell print errors as readable text instead of CLIXML.
+      const file = path.join(os.tmpdir(), `caret-run-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.ps1`);
+      fs.writeFileSync(file, '﻿' + script, { encoding: 'utf8', mode: 0o600 });
+      const proc = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file],
         { cwd, windowsHide: true, env: { ...process.env, FORCE_COLOR: '0' } });
+      proc.once('close', () => { try { fs.unlinkSync(file); } catch {} });
+      proc.once('error', () => { try { fs.unlinkSync(file); } catch {} });
+      return proc;
     }
     const sh = process.env.SHELL || '/bin/bash';
     return spawn(sh, ['-lc', `${command}\n__s=$?; printf '\\n${MARK}%s\\n' "$PWD"; exit $__s`],
@@ -56,8 +65,11 @@ class Terminals extends EventEmitter {
       let settled = false;
       const finish = (result) => { if (!settled) { settled = true; resolve(result); } };
 
-      const onChunk = (buf) => {
-        let text = pending + buf.toString('utf8');
+      // One decoder per stream: a multi-byte character (Thai, emoji) can be split between two chunks.
+      const decoders = new Map();
+      const decode = (stream, buf) => { if (!decoders.has(stream)) decoders.set(stream, new StringDecoder('utf8')); return decoders.get(stream).write(buf); };
+      const onChunk = (text0) => {
+        let text = pending + text0;
         pending = '';
         // Hold back a trailing partial line that could be the start of our marker.
         const lastNl = text.lastIndexOf('\n');
@@ -86,8 +98,8 @@ class Terminals extends EventEmitter {
           setTimeout(() => finish({ running: true, output: tail(output), urls: [...seenUrls], cwd: s.cwd }), 800);
         }
       };
-      proc.stdout.on('data', onChunk);
-      proc.stderr.on('data', onChunk);
+      proc.stdout.on('data', b => onChunk(decode('out', b)));
+      proc.stderr.on('data', b => onChunk(decode('err', b)));
       proc.on('error', err => { this.emit('data', { id, chunk: `\r\n${err.message}\r\n` }); });
       proc.on('close', code => {
         if (pending.includes(MARK)) s.cwd = pending.slice(pending.indexOf(MARK) + MARK.length).trim() || s.cwd;

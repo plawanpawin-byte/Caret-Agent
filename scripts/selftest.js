@@ -132,6 +132,23 @@ async function t(name, fn) {
     await assert.rejects(() => ws.readImage('notes.txt'), /not a picture/);
   });
 
+  // The terminal (used by the user and by every AI) must show real text, including Thai, and readable errors.
+  await t('terminal: Thai text survives, errors are plain text, exit code and folder are kept', async () => {
+    const terminals = require('../src/main/terminal');
+    ws.setRoot(proj);
+    const id = terminals.create({ cwd: proj, title: 't' });
+    const thai = process.platform === 'win32' ? 'Write-Output "สวัสดี ตัวอย่าง"' : 'echo "สวัสดี ตัวอย่าง"';
+    const a = await terminals.run(id, thai, { source: 'ai', timeoutMs: 20000 });
+    assert.ok(a.output.includes('สวัสดี ตัวอย่าง'), 'Thai output: ' + JSON.stringify(a.output));
+    const bad = process.platform === 'win32' ? 'Get-Item .\definitely-missing-file.txt' : 'cat ./definitely-missing-file.txt';
+    const b = await terminals.run(id, bad, { source: 'ai', timeoutMs: 20000 });
+    assert.ok(!/CLIXML|<Objs/.test(b.output), 'no CLIXML: ' + b.output.slice(0, 120));
+    assert.ok(/definitely-missing-file/.test(b.output), 'error names the file');
+    const c = await terminals.run(id, process.platform === 'win32' ? 'exit 3' : 'exit 3', { source: 'ai', timeoutMs: 20000 });
+    assert.strictEqual(c.exitCode, 3);
+    terminals.close(id);
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();
