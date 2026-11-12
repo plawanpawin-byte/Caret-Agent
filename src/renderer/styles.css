@@ -502,7 +502,7 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .logo { border-radius: 5px; display: block; }
 .watermark .mark { opacity: .16; filter: none; border-radius: 24px; }
 .welcome-mini .logo { opacity: .6; filter: none; }
-@media (max-width: 1100px) { .chatpane { width: 340px; } .sidebar { width: 220px; } .filespane { display: none; } .omnibox { display: none; } }
+@media (max-width: 1100px) { .chatpane { width: 340px; } .sidebar { width: 220px; } .filespane { width: 230px; } .omnibox { display: none; } }
 .titlebar .brand .logo { border: 1px solid #4a4a4a; border-radius: 6px; filter: brightness(1.7) contrast(1.1); }
 
 /* v4: prompt footer never overflows, however long the model name is */
