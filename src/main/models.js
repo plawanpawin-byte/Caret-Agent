@@ -158,6 +158,27 @@ function score(m, hw, mode, needVision) {
 
 const LOCAL_MODELS = false;
 
+// The models named in the menu, in the order they appear. `id` is what is sent to the app or API.
+const CURATED = {
+  claude: [
+    { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }, { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' }, { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5' },
+    { id: 'claude-fable-5', label: 'Fable 5' }, { id: 'claude-fable-5-1', label: 'Fable 5.1' }, { id: 'claude-fable-5-2', label: 'Fable 5.2' },
+  ],
+  codex: [
+    { id: 'gpt-6-astra', label: 'GPT 6 Astra' }, { id: 'gpt-6-sol', label: 'GPT 6 Sol' }, { id: 'gpt-6-luna', label: 'GPT 6 Luna' },
+    { id: 'gpt-5.6-sol', label: 'GPT 5.6 Sol' }, { id: 'gpt-5.5', label: 'GPT 5.5' }, { id: 'gpt-4o', label: 'GPT 4o' }, { id: 'codex-5.3', label: 'Codex 5.3' },
+  ],
+  gemini: [
+    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }, { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
+    { id: 'gemini-argon', label: 'Gemini Argon' }, { id: 'gemini-carbon', label: 'Gemini Carbon' },
+  ],
+  xai: [],
+};
+function curated(prov, list, defaultLabel) {
+  const first = { id: 'default', key: `${prov}:default`, label: defaultLabel, tools: true, vision: true };
+  return [first, ...list.map(m => ({ id: m.id, key: `${prov}:${m.id}`, label: m.label, tools: true, vision: true }))];
+}
+
 // Everything the model menu shows. Only usable models are listed.
 async function catalog({ mode = 'code', needVision = false } = {}) {
   const hw = await hardware();
@@ -174,8 +195,8 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
   if (lms.length) providers.push({ id: 'lmstudio', name: 'Local · LM Studio', kind: 'local', running: true, models: rank(lms, 'lmstudio') });
   if (lcpp.length) providers.push({ id: 'llamacpp', name: 'Local · llama.cpp', kind: 'local', running: true, models: rank(lcpp, 'llamacpp') });
 
-  if (resolveCli('claude')) providers.push({ id: 'claude', family: 'claude', method: 'app', name: 'Claude Code', kind: 'cli', models: ['default', 'opus', 'sonnet', 'haiku'].map(id => ({ id, key: `claude:${id}`, label: id === 'default' ? 'Claude (your default)' : `Claude ${id[0].toUpperCase() + id.slice(1)}`, tools: true, vision: true })) });
-  if (resolveCli('codex')) providers.push({ id: 'codex', family: 'codex', method: 'app', name: 'Codex', kind: 'cli', models: [{ id: 'default', key: 'codex:default', label: 'Codex (your default)', tools: true, vision: true }] });
+  if (resolveCli('claude')) providers.push({ id: 'claude', family: 'claude', method: 'app', name: 'Claude Code', kind: 'cli', models: curated('claude', CURATED.claude, 'Claude (your default)') });
+  if (resolveCli('codex')) providers.push({ id: 'codex', family: 'codex', method: 'app', name: 'Codex', kind: 'cli', models: curated('codex', CURATED.codex, 'Codex (your default)') });
 
   // Ask every service that has a key at the same time, so a slow one does not hold up the menu.
   const apiIds = Object.keys(CLOUD_APIS);
@@ -185,7 +206,14 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
     if (list === null) continue;
     const base = { id: p, family: CLOUD_APIS[p].family, method: 'api', name: CLOUD_APIS[p].name, kind: 'api' };
     if (list.error) providers.push({ ...base, error: list.error, models: [] });
-    else providers.push({ ...base, models: list.map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true })) });
+    else {
+      // The models we name come first; anything else the service lists follows.
+      const fam = CLOUD_APIS[p].family;
+      const named = CURATED[fam] || [];
+      const ids = new Set(named.map(m => m.id));
+      const rest = list.filter(id => !ids.has(id)).map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true }));
+      providers.push({ ...base, models: [...named.map(m => ({ id: m.id, key: `${p}:${m.id}`, label: m.label, tools: true, vision: true })), ...rest] });
+    }
   }
 
   const auto = pickAuto(providers, mode, needVision);
