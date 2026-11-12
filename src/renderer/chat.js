@@ -343,6 +343,7 @@ export function createChat() {
     planBtn.classList.toggle('on', mode === 'plan');
     ctxBtn.classList.toggle('on', useCodebase);
     permBtn.className = 'pill perm-' + (s.permission || 'ask');
+    permBtn.title = `Permissions: ${p.label}. ${p.sub || ''}`.trim();
     permBtn.replaceChildren(icon(p.icon), h('span', { text: p.label }), icon('down', 'caret-down'));
     modelBtn.replaceChildren(icon(s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
       h('span', { text: s.model && s.model !== 'auto' ? modelLabel(s.model) : 'Auto' }), icon('down', 'caret-down'));
