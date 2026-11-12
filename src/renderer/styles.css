@@ -848,3 +848,8 @@ body.agent-layout .pp-list { display: block; }
 .menu .mi .mkey { margin-left: 24px; color: var(--faint); font-size: 12px; align-self: center; white-space: nowrap; }
 .menu .mi { align-items: center; }
 @container (max-width: 420px) { .pill[class*="perm-"] span { display: none; } .pill[class*="perm-"] .caret-down { display: none; } .composer-row .pill.model { max-width: 40%; } }
+.filespane .panel-head { height: 40px; padding: 0 8px 0 16px; text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600; color: var(--text-hi); }
+.filespane .tree { padding: 0 6px 12px; }
+.filespane .row { height: 24px; border-radius: 6px; }
+.filespane .row.sel { background: var(--surface-2); }
+#agent-center .term-head, #agent-center .bottom { background: transparent; }

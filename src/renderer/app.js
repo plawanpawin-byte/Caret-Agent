@@ -187,13 +187,14 @@ async function boot() {
   }, true);
   $('filespane').append(filesExplorer.el);
   const agentTerm = h('div', { class: 'col hidden', style: { height: '220px', borderTop: '1px solid var(--border)', background: 'var(--panel)' } });
+  let agTermBtn;
   const agFilesBtn = h('button', { class: 'ag-top-btn', title: 'Show files', onclick: () => emit('cmd', 'toggle-chat') }, icon('files'), h('span', { text: 'Files' }));
   const agTop = h('div', { class: 'ag-top' },
     h('button', { class: 'icon-btn', title: 'Side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
     h('span', { class: 'grow' }),
     agFilesBtn,
-    h('button', { class: 'ag-top-btn', title: 'Terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { text: 'Terminal' })),
-    h('button', { class: 'ag-top-btn', title: 'Open the code editor', onclick: () => setLayout('studio') }, h('span', { text: 'Editor' }), icon('external')));
+    agTermBtn = h('button', { class: 'ag-top-btn', title: 'Terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { text: 'Terminal' })),
+    h('button', { class: 'ag-top-btn', title: 'Open the IDE', onclick: () => setLayout('studio') }, h('span', { text: 'IDE' }), icon('external')));
   $('agent-center').append(agTop);
   if (!store.get('agFiles', false)) $('filespane').classList.add('hidden');
 
@@ -343,7 +344,7 @@ async function boot() {
       }
       else if (c === 'toggle-bottom' || c === 'show-bottom') {
         if (state.layout === 'studio') showPane('bottom', c === 'show-bottom' ? true : undefined);
-        else { const show = c === 'show-bottom' ? true : agentTerm.classList.contains('hidden'); agentTerm.classList.toggle('hidden', !show); if (show) agentTerm.append(terminal.el); }
+        else { const show = c === 'show-bottom' ? true : agentTerm.classList.contains('hidden'); agentTerm.classList.toggle('hidden', !show); agTermBtn.classList.toggle('on', show); if (show) agentTerm.append(terminal.el); }
       }
       else if (c === 'focus-chat') { if (state.layout === 'studio') showPane('chatpane', true); chat.focus(); }
       else if (c === 'settings-models') openSettings('models');
