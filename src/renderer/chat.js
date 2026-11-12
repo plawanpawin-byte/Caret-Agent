@@ -402,7 +402,7 @@ export function createChat() {
       have.add(p.family || p.id);
       items.push('sep', { group: p.name, right: p.kind === 'cli' ? 'app on this computer' : 'API key' });
       if (p.error) { items.push({ note: `Could not list models: ${p.error}` }, { label: 'Check this key…', icon: 'key', onClick: () => emit('cmd', { providers: p.family, method: 'api' }) }); continue; }
-      for (const m of p.models) items.push({ label: m.label || m.id, icon: 'cloud', checked: cur === m.key, onClick: () => pick(m.key) });
+      for (const m of p.models) items.push({ label: m.label || m.id, checked: cur === m.key, onClick: () => pick(m.key) });
     }
     // AIs that are not set up yet: picking one opens its page, where the key is entered or the app installed.
     const todo = [
