@@ -524,6 +524,33 @@ export function createChat() {
   on('settings', updateComposer);
   on('catalog', updateComposer);
   on('attach-file', p => { addFile(p); textarea.focus(); });
+  // Right-click a picture you pasted, in the box or in the conversation, to copy it again or save it.
+  const pngOf = src => new Promise((ok, no) => {
+    const im = new Image();
+    im.onload = () => { const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); c.toBlob(b => b ? ok(b) : no(new Error('Could not read the image')), 'image/png'); };
+    im.onerror = () => no(new Error('Could not read the image'));
+    im.src = src;
+  });
+  document.addEventListener('contextmenu', e => {
+    const img = e.target.closest?.('.thumbs img, .attachments .chip img');
+    if (!img) return;
+    e.preventDefault();
+    const src = img.src;
+    menu(img, [
+      { label: 'Copy image', icon: 'copy', onClick: async () => {
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': await pngOf(src) })]); toast('Image copied'); }
+        catch (err) { toast(err.message || 'Could not copy the image', { error: true }); }
+      } },
+      { label: 'Save image', icon: 'download', onClick: async () => {
+        try {
+          const url = URL.createObjectURL(await pngOf(src));
+          const a = document.createElement('a'); a.href = url; a.download = 'image.png'; document.body.append(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch (err) { toast(err.message || 'Could not save the image', { error: true }); }
+      } },
+    ], { x: e.clientX, y: e.clientY });
+  });
+
   on('workspace', async () => { chats.clear(); openIds = []; activeId = null; await init(); });
   on('cmd', c => { if (c === 'focus-chat') textarea.focus(); if (c === 'new-chat') newChat(); });
 

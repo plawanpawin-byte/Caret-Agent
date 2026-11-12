@@ -158,21 +158,17 @@ function score(m, hw, mode, needVision) {
 
 const LOCAL_MODELS = false;
 
-// The models named in the menu, in the order they appear. `id` is what is sent to the app or API.
+// Models of the Claude Code and Codex apps, in the order they appear. Each one was run through the app and
+// answered; models the app rejects ("not supported with a ChatGPT account") are left out. API lists come
+// straight from the company's API, so only models that really exist for that key are shown.
 const CURATED = {
   claude: [
     { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }, { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' }, { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5' },
     { id: 'claude-fable-5', label: 'Fable 5' }, { id: 'claude-fable-5-1', label: 'Fable 5.1' }, { id: 'claude-fable-5-2', label: 'Fable 5.2' },
   ],
   codex: [
-    { id: 'gpt-6-astra', label: 'GPT 6 Astra' }, { id: 'gpt-6-sol', label: 'GPT 6 Sol' }, { id: 'gpt-6-luna', label: 'GPT 6 Luna' },
-    { id: 'gpt-5.6-sol', label: 'GPT 5.6 Sol' }, { id: 'gpt-5.5', label: 'GPT 5.5' }, { id: 'gpt-4o', label: 'GPT 4o' }, { id: 'codex-5.3', label: 'Codex 5.3' },
+    { id: 'gpt-6-astra', label: 'GPT 6 Astra' }, { id: 'gpt-6-sol', label: 'GPT 6 Sol' }, { id: 'gpt-6-luna', label: 'GPT 6 Luna' }, { id: 'gpt-5.6-sol', label: 'GPT 5.6 Sol' },
   ],
-  gemini: [
-    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }, { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
-    { id: 'gemini-argon', label: 'Gemini Argon' }, { id: 'gemini-carbon', label: 'Gemini Carbon' },
-  ],
-  xai: [],
 };
 function curated(prov, list, defaultLabel) {
   const first = { id: 'default', key: `${prov}:default`, label: defaultLabel, tools: true, vision: true };
@@ -206,14 +202,7 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
     if (list === null) continue;
     const base = { id: p, family: CLOUD_APIS[p].family, method: 'api', name: CLOUD_APIS[p].name, kind: 'api' };
     if (list.error) providers.push({ ...base, error: list.error, models: [] });
-    else {
-      // The models we name come first; anything else the service lists follows.
-      const fam = CLOUD_APIS[p].family;
-      const named = CURATED[fam] || [];
-      const ids = new Set(named.map(m => m.id));
-      const rest = list.filter(id => !ids.has(id)).map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true }));
-      providers.push({ ...base, models: [...named.map(m => ({ id: m.id, key: `${p}:${m.id}`, label: m.label, tools: true, vision: true })), ...rest] });
-    }
+    else providers.push({ ...base, models: list.map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true })) });
   }
 
   const auto = pickAuto(providers, mode, needVision);
