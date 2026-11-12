@@ -229,6 +229,37 @@ async function t(name, fn) {
     assert.match(lockMessage({ reason: 'streak', count: 4 }), /Do not run any more commands/);
   });
 
+  await t('a Codex that endlessly re-runs a failing command is stopped by the runner', async () => {
+    // A stand-in for the codex program: prints the same failing command again and again, then would wait a long time.
+    const stub = path.join(os.tmpdir(), 'caret-stub-codex-' + process.pid + '.js');
+    fs.writeFileSync(stub, `
+      const ev = n => JSON.stringify({ type: 'item.completed', item: { id: 'c' + n, type: 'command_execution', command: 'node nothere.js', exit_code: 1, aggregated_output: 'Error: Cannot find module' } });
+      let n = 0;
+      const timer = setInterval(() => console.log(ev(++n)), 100);
+      setTimeout(() => clearInterval(timer), 60000);
+    `);
+    const cliPath = require.resolve('../src/main/cli');
+    const runnersPath = require.resolve('../src/main/runners');
+    const realCli = require(cliPath).resolveCli;
+    require(cliPath).resolveCli = () => ({ cmd: process.execPath, args: [stub], env: { ELECTRON_RUN_AS_NODE: '1' } });
+    delete require.cache[runnersPath];                     // load runners again so it picks up the stand-in
+    try {
+      const { runCodex } = require('../src/main/runners');
+      const seen = [];
+      const h = runCodex({ model: 'default', mode: 'agent', permission: 'full', prompt: 'x', system: 's', images: [], on: { text() {}, thinking() {}, fileChanged() {}, tool: e => seen.push(e) } });
+      const started = Date.now();
+      const r = await Promise.race([h.done, new Promise(res => setTimeout(() => res({ error: 'NOT STOPPED' }), 20000))]);
+      h.stop();
+      assert.match(r.error, /Stopped: the same command failed 3 times/);
+      assert.ok(Date.now() - started < 15000, 'stopped quickly');
+      assert.ok(seen.filter(e => e.status === 'error').length <= 4, 'it did not keep going');
+    } finally {
+      require(cliPath).resolveCli = realCli;
+      delete require.cache[runnersPath];
+      fs.rmSync(stub, { force: true });
+    }
+  });
+
   await t('write_file refuses once when it would drop most of a file; failed commands are recognised', async () => {
     const tools = require('../src/main/tools');
     const { failedRun } = require('../src/main/agent');

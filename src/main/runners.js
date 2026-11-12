@@ -68,10 +68,12 @@ function runClaude({ tabId, model, mode, permission, prompt, system, sessionId, 
 
   const proc = startCli('claude', args, { cwd: ws.getRoot() || os.homedir(), stdin: text });
   const result = { sessionId: null, files: [], commands: 0, error: null };
+  let tripped = false;
   const breaker = createBreaker(), cmds = new Map(); // tool id -> command, to see which ones fail
   let stderr = '';
   proc.stderr.on('data', d => { stderr += d; if (stderr.length > 20000) stderr = stderr.slice(-10000); });
   lines(proc.stdout, line => {
+    if (tripped) return;   // cut off by the breaker: ignore what was already on its way
     let ev; try { ev = JSON.parse(line); } catch { return; }
     if (ev.session_id) result.sessionId = ev.session_id;
     if (ev.type === 'assistant') {
@@ -93,7 +95,7 @@ function runClaude({ tabId, model, mode, permission, prompt, system, sessionId, 
           // The AI keeps re-running a command that fails: stop it rather than let it loop forever.
           if (cmds.has(b.tool_use_id) && !result.error) {
             const trip = breaker.record(cmds.get(b.tool_use_id), !!b.is_error, new Set(result.files).size);
-            if (trip) { result.error = stopMessage(trip); killTree(proc); }
+            if (trip) { tripped = true; result.error = stopMessage(trip); killTree(proc); }
           }
         }
       }
@@ -126,10 +128,12 @@ function runCodex({ model, mode, permission, prompt, system, images, on }) {
   const note = permission === 'ask' && mode !== 'plan' ? '\n\n(The user chose "Ask first". You are read-only: describe the exact changes and commands you propose, and the user will approve them.)' : '';
   const proc = startCli('codex', args, { cwd: root, stdin: `${system}\n\n---\n\nUSER REQUEST:\n${prompt}${note}` });
   const result = { files: [], commands: 0, error: null };
+  let tripped = false;
   const breaker = createBreaker();
   let stderr = '';
   proc.stderr.on('data', d => { stderr += d; if (stderr.length > 20000) stderr = stderr.slice(-10000); });
   lines(proc.stdout, line => {
+    if (tripped) return;
     let ev; try { ev = JSON.parse(line); } catch { return; }
     const item = ev.item || {};
     if (ev.type === 'item.started' && item.type === 'command_execution') {
@@ -141,7 +145,7 @@ function runCodex({ model, mode, permission, prompt, system, images, on }) {
       else if (item.type === 'command_execution') {
         on.tool({ id: item.id, name: 'run_command', args: { command: item.command }, status: item.exit_code ? 'error' : 'done', result: short(item.aggregated_output || '') });
         const trip = !result.error && breaker.record(item.command, !!item.exit_code, new Set(result.files).size);
-        if (trip) { result.error = stopMessage(trip); killTree(proc); }
+        if (trip) { tripped = true; result.error = stopMessage(trip); killTree(proc); }
       }
       else if (item.type === 'file_change') {
         for (const c of item.changes || []) { result.files.push(c.path); on.fileChanged(c.path); }
