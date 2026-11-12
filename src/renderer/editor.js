@@ -165,6 +165,7 @@ export function createEditorArea() {
     }
   }
 
+  on('editor-action', id => { if (!editor || !id) return; editor.focus(); editor.trigger('menu', id, null); });
   on('open-file', open);
   on('workspace', () => { closeAll(); });
   on('fs-changed', () => syncFromDisk());

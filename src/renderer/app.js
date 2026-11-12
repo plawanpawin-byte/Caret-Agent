@@ -46,8 +46,21 @@ async function boot() {
       { label: 'Check for updates', icon: 'refresh', onClick: checkUpdate },
     ]);
   }
-  const doc = c => () => { try { document.execCommand(c); } catch {} };
-  const pasteText = async () => { try { document.execCommand('insertText', false, await navigator.clipboard.readText()); } catch {} };
+  // Clicking a menu moves focus off the text, so remember where the user was typing.
+  let lastField = null;
+  const remember = el => { if (el && el !== document.body && !el.closest?.('.menubar, .menu')) lastField = el; };
+  document.addEventListener('focusin', e => remember(e.target), true);
+  // A press on the menu bar moves focus to the button: note where the cursor was first.
+  document.addEventListener('mousedown', e => { if (e.target.closest?.('.menubar')) remember(document.activeElement); }, true);
+  const inEditor = () => !!lastField?.closest?.('#editor-host');
+  const doc = c => () => {
+    if (inEditor()) { emit('editor-action', { undo: 'undo', redo: 'redo', cut: 'editor.action.clipboardCutAction', copy: 'editor.action.clipboardCopyAction', selectAll: 'editor.action.selectAll' }[c]); return; }
+    lastField?.focus?.(); try { document.execCommand(c); } catch {}
+  };
+  const pasteText = async () => {
+    if (inEditor()) { emit('editor-action', 'editor.action.clipboardPasteAction'); return; }
+    try { const t = await navigator.clipboard.readText(); lastField?.focus?.(); document.execCommand('insertText', false, t); } catch {}
+  };
   const menus = {
     File: () => [
       { label: 'Open Folder…', key: 'Ctrl+O', icon: 'folderOpen', onClick: () => emit('cmd', 'open-folder') },
@@ -79,7 +92,7 @@ async function boot() {
     ],
   };
   const menubar = h('div', { class: 'menubar' }, ...Object.entries(menus).map(([name, items]) => {
-    const b = h('button', { text: name, onclick: () => { menu(b, items()); b.classList.add('open'); } });
+    const b = h('button', { text: name, onclick: () => { remember(document.activeElement); menu(b, items()); b.classList.add('open'); } });
     b.addEventListener('mouseenter', () => { if (document.querySelector('.menu') && menubar.querySelector('.open')) { menu(b, items()); menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); b.classList.add('open'); } });
     return b;
   }));
