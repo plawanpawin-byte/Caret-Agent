@@ -26,8 +26,8 @@ You start a feature with Claude. The limit runs out. You move to Codex or Grok, 
 **One memory, any AI**
 Claude, Codex, Grok, Gemini or ChatGPT — they all share the same project note. After every turn Caret Agent also logs what happened, so the note stays honest even if an AI forgets to update it.
 
-**Set up any AI from one panel**
-AI providers lists every AI Caret Agent can use and what is ready. Open one to see what it is and set it up: Claude Code and Codex install with one click and sign in through your browser; Grok, Antigravity (Gemini) and ChatGPT connect with an API key.
+**Set up any AI from the model menu**
+Open the model menu in the prompt bar and everything is there. Claude and Codex can run as an app on your computer (installed with one click, signed in through your browser) or through an API key, your choice. Grok and Antigravity (Gemini) connect with an API key. Each key is checked before it is saved and kept encrypted on your computer.
 
 **You decide how much the AI may do**
 - **Ask first** — every edit and every command waits for your OK, with a preview of what will change.

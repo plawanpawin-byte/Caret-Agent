@@ -114,18 +114,23 @@ async function openaiCompatLocal(base) {
 const guessParams = id => { const m = /(\d+(?:\.\d+)?)b\b/i.exec(id); return m ? Number(m[1]) : 0; };
 
 // ---------- cloud ----------
+// Each API belongs to a "family" in the AI list: Claude and Codex can be used as an app on this computer
+// or through their company's API; Grok and Antigravity (Gemini) are API only.
 const CLOUD_APIS = {
-  xai: { name: 'Grok', base: 'https://api.x.ai/v1', filter: id => /grok/i.test(id) && !/image|imagine|vision-beta/i.test(id) },
-  gemini: { name: 'Antigravity (Gemini)', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /gemini/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
-  openai: { name: 'ChatGPT', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
+  anthropic: { name: 'Claude API', family: 'claude', base: 'https://api.anthropic.com/v1', filter: id => /claude/i.test(id),
+    headers: key => ({ authorization: `Bearer ${key}`, 'x-api-key': key, 'anthropic-version': '2023-06-01' }) },
+  openai: { name: 'OpenAI API', family: 'codex', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
+  xai: { name: 'Grok', family: 'xai', base: 'https://api.x.ai/v1', filter: id => /grok/i.test(id) && !/image|imagine|vision-beta/i.test(id) },
+  gemini: { name: 'Antigravity (Gemini)', family: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /gemini/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
 };
+const apiHeaders = (provider, key) => (CLOUD_APIS[provider].headers ? CLOUD_APIS[provider].headers(key) : { authorization: `Bearer ${key}` });
 
 async function cloudApiModels(provider) {
   const key = settings.getKey(provider);
   if (!key) return null;
   const cfg = CLOUD_APIS[provider];
   try {
-    const j = await getJson(cfg.base + '/models', { headers: { authorization: `Bearer ${key}` }, timeout: 6000 });
+    const j = await getJson(cfg.base + '/models' + (provider === 'anthropic' ? '?limit=100' : ''), { headers: apiHeaders(provider, key), timeout: 6000 });
     return (j.data || []).map(m => String(m.id).replace(/^models\//, '')).filter(cfg.filter).sort().reverse();
   } catch (e) { return { error: e.message }; }
 }
@@ -169,14 +174,15 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
   if (lms.length) providers.push({ id: 'lmstudio', name: 'Local · LM Studio', kind: 'local', running: true, models: rank(lms, 'lmstudio') });
   if (lcpp.length) providers.push({ id: 'llamacpp', name: 'Local · llama.cpp', kind: 'local', running: true, models: rank(lcpp, 'llamacpp') });
 
-  if (resolveCli('claude')) providers.push({ id: 'claude', name: 'Claude Code', kind: 'cli', models: ['default', 'opus', 'sonnet', 'haiku'].map(id => ({ id, key: `claude:${id}`, label: id === 'default' ? 'Claude (your default)' : `Claude ${id[0].toUpperCase() + id.slice(1)}`, tools: true, vision: true })) });
-  if (resolveCli('codex')) providers.push({ id: 'codex', name: 'Codex (ChatGPT)', kind: 'cli', models: [{ id: 'default', key: 'codex:default', label: 'Codex (your default)', tools: true, vision: true }] });
+  if (resolveCli('claude')) providers.push({ id: 'claude', family: 'claude', method: 'app', name: 'Claude Code', kind: 'cli', models: ['default', 'opus', 'sonnet', 'haiku'].map(id => ({ id, key: `claude:${id}`, label: id === 'default' ? 'Claude (your default)' : `Claude ${id[0].toUpperCase() + id.slice(1)}`, tools: true, vision: true })) });
+  if (resolveCli('codex')) providers.push({ id: 'codex', family: 'codex', method: 'app', name: 'Codex', kind: 'cli', models: [{ id: 'default', key: 'codex:default', label: 'Codex (your default)', tools: true, vision: true }] });
 
   for (const p of Object.keys(CLOUD_APIS)) {
     const list = await cloudApiModels(p);
     if (list === null) continue;
-    if (list.error) providers.push({ id: p, name: CLOUD_APIS[p].name, kind: 'api', error: list.error, models: [] });
-    else providers.push({ id: p, name: CLOUD_APIS[p].name, kind: 'api', models: list.map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true })) });
+    const base = { id: p, family: CLOUD_APIS[p].family, method: 'api', name: CLOUD_APIS[p].name, kind: 'api' };
+    if (list.error) providers.push({ ...base, error: list.error, models: [] });
+    else providers.push({ ...base, models: list.map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true })) });
   }
 
   const auto = pickAuto(providers, mode, needVision);
@@ -192,7 +198,7 @@ function pickAuto(providers, mode, needVision) {
   const cloud = providers.find(p => p.kind === 'cli' && p.models.length) || providers.find(p => p.kind === 'api' && p.models.length);
   if (cloud) return { key: cloud.models[0].key, reason: LOCAL_MODELS ? `No local model can ${needVision ? 'see images' : 'edit files'} — using ${cloud.name}` : `Uses ${cloud.name}` };
   if (best) return { key: best.key, reason: 'Only local model available (limited tools)' };
-  return { key: null, reason: 'No AI is set up yet. Open AI providers to install Claude Code or Codex, or connect a key.' };
+  return { key: null, reason: 'No AI is set up yet. Open the model menu to set up Claude, Codex, Grok or Antigravity.' };
 }
 
-module.exports = { catalog, hardware, ensureOllama, CLOUD_APIS, OLLAMA, getJson };
+module.exports = { catalog, hardware, ensureOllama, CLOUD_APIS, apiHeaders, OLLAMA, getJson };

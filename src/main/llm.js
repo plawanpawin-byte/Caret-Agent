@@ -107,9 +107,10 @@ function toOpenAIMessages(messages) {
   });
 }
 
-async function* openaiChat({ base, key, model, messages, tools, signal }) {
+async function* openaiChat({ base, key, headers: extra, model, messages, tools, signal }) {
   const headers = { 'content-type': 'application/json' };
   if (key) headers.authorization = `Bearer ${key}`;
+  Object.assign(headers, extra || {});
   const r = await appFetch(base.replace(/\/$/, '') + '/chat/completions', {
     method: 'POST', signal, headers,
     body: JSON.stringify({ model, messages: toOpenAIMessages(messages), tools: tools?.length ? tools : undefined, stream: true }),

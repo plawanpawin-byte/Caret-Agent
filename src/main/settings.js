@@ -23,7 +23,7 @@ const DEFAULTS = {
   keys: {},                    // provider -> encrypted base64
 };
 
-const ALLOWED_KEYS = new Set(['xai', 'gemini', 'openai']);
+const ALLOWED_KEYS = new Set(['xai', 'gemini', 'openai', 'anthropic']);
 
 let cache = null;
 const file = () => path.join(app.getPath('userData'), 'settings.json');

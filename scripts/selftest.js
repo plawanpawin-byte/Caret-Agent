@@ -206,6 +206,28 @@ async function t(name, fn) {
     assert.match(await tools.execute('edit_file', { path: 'a.js', old_text: 'return 1;', new_text: 'return 2;' }, run), /Edited/);
   });
 
+  await t('AI families: Claude and Codex can use the app or an API key; every API belongs to one family; bad keys are refused before saving', async () => {
+    const providers = require('../src/main/providers');
+    const models = require('../src/main/models');
+    const settings = require('../src/main/settings');
+    const byId = Object.fromEntries(providers.CATALOG.map(p => [p.id, p]));
+    assert.deepStrictEqual(Object.keys(byId), ['claude', 'codex', 'xai', 'gemini']);
+    assert.ok(byId.claude.bin && byId.claude.apiId === 'anthropic', 'Claude: app and API');
+    assert.ok(byId.codex.bin && byId.codex.apiId === 'openai', 'Codex: app and API');
+    assert.ok(!byId.xai.bin && !byId.gemini.bin, 'Grok and Antigravity are API only');
+    for (const p of providers.CATALOG) assert.strictEqual(models.CLOUD_APIS[p.apiId].family, p.id, p.id + ' API points back to its family');
+    assert.ok(settings.publicView().keysSet.anthropic === false || settings.publicView().keysSet.anthropic === true, 'an Anthropic key can be stored');
+    const h = models.apiHeaders('anthropic', 'sk-ant-x');
+    assert.strictEqual(h['x-api-key'], 'sk-ant-x');
+    assert.ok(h['anthropic-version']);
+    assert.strictEqual(models.apiHeaders('xai', 'k1234567').authorization, 'Bearer k1234567');
+    for (const bad of ['', 'short', 'has a space inside it', 'two\nlines of key text']) {
+      const r = await providers.checkKey('xai', bad);
+      assert.strictEqual(r.ok, false, JSON.stringify(bad) + ' is refused without calling the service');
+    }
+    await assert.rejects(() => providers.checkKey('nope', 'abcdefghijkl'), /Unknown provider/);
+  });
+
   await t('breaker stops an AI that keeps re-running failing commands, but not one that is fixing things', async () => {
     const { createBreaker, stopMessage, lockMessage } = require('../src/main/breaker');
     // the same command, again and again

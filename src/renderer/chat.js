@@ -388,14 +388,21 @@ export function createChat() {
   function modelItems(cat) {
     const cur = state.settings.model || 'auto';
     const items = [{ label: 'Auto', sub: cat?.auto?.reason || 'Picks the best model for the task and this computer', icon: 'sparkle', checked: cur === 'auto', onClick: () => pick('auto') }];
+    const have = new Set();
     for (const p of cat?.providers || []) {
       if (!p.models.length && !p.error) continue;
-      items.push('sep', { group: p.name, right: p.kind === 'cli' ? 'your sign-in' : 'your key' });
-      if (p.error) { items.push({ note: `Could not list models: ${p.error}` }); continue; }
+      have.add(p.family || p.id);
+      items.push('sep', { group: p.name, right: p.kind === 'cli' ? 'app on this computer' : 'API key' });
+      if (p.error) { items.push({ note: `Could not list models: ${p.error}` }, { label: 'Check this key…', icon: 'key', onClick: () => emit('cmd', { providers: p.family, method: 'api' }) }); continue; }
       for (const m of p.models) items.push({ label: m.label || m.id, icon: 'cloud', checked: cur === m.key, onClick: () => pick(m.key) });
     }
-    if (!(cat?.providers || []).some(p => p.models.length)) items.push('sep', { note: 'No AI is set up yet.' });
-    items.push('sep', { label: 'Install or connect an AI…', icon: 'extensions', onClick: () => emit('cmd', 'providers') });
+    // AIs that are not set up yet: picking one opens its page, where the key is entered or the app installed.
+    const todo = [
+      { id: 'claude', name: 'Claude', sub: 'Use the app or an API key' }, { id: 'codex', name: 'Codex', sub: 'Use the app or an API key' },
+      { id: 'xai', name: 'Grok', sub: 'Add an xAI API key' }, { id: 'gemini', name: 'Antigravity', sub: 'Add a Google AI Studio key' },
+    ].filter(f => !have.has(f.id));
+    if (todo.length) items.push('sep', { group: 'Set up' }, ...todo.map(f => ({ label: f.name, sub: f.sub, icon: 'plus', onClick: () => emit('cmd', { providers: f.id }) })));
+    items.push('sep', { label: 'Models and API keys…', sub: 'Choose the app or an API key for each AI', icon: 'key', onClick: () => emit('cmd', 'providers') });
     return items;
   }
   async function pick(key) { await saveSettings({ model: key }); updateComposer(); }

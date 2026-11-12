@@ -7,14 +7,17 @@ const cli = require('./cli');
 const settings = require('./settings');
 const models = require('./models');
 
+// One entry per AI "family". Claude and Codex can be used as an app on this computer (bin, pkg) or through the
+// company's API (apiId); Grok and Antigravity (Gemini) are API only.
 const CATALOG = [
-  { id: 'claude', name: 'Claude Code', by: 'Anthropic', kind: 'cli', bin: 'claude', pkg: '@anthropic-ai/claude-code',
-    blurb: 'Uses your Claude plan. Reads, edits and runs commands in your project.', login: ['auth', 'login'], statusArgs: ['auth', 'status'], site: 'https://claude.com/claude-code' },
-  { id: 'codex', name: 'Codex', by: 'OpenAI', kind: 'cli', bin: 'codex', pkg: '@openai/codex',
-    blurb: 'Uses your ChatGPT plan. Writes and changes code from your prompts.', login: ['login'], statusArgs: ['login', 'status'], site: 'https://developers.openai.com/codex' },
-  { id: 'xai', name: 'Grok', by: 'xAI', kind: 'api', blurb: 'Grok models. Connect with an xAI API key.', keyUrl: 'https://console.x.ai' },
-  { id: 'gemini', name: 'Antigravity', by: 'Google', kind: 'api', blurb: 'Gemini models. Connect with a Google AI Studio key.', keyUrl: 'https://aistudio.google.com/apikey' },
-  { id: 'openai', name: 'ChatGPT', by: 'OpenAI', kind: 'api', blurb: 'GPT models. Connect with an OpenAI API key.', keyUrl: 'https://platform.openai.com/api-keys' },
+  { id: 'claude', name: 'Claude', by: 'Anthropic', blurb: 'Use the Claude app on this computer, or your own API key.',
+    bin: 'claude', pkg: '@anthropic-ai/claude-code', login: ['auth', 'login'], statusArgs: ['auth', 'status'], site: 'https://claude.com/claude-code',
+    apiId: 'anthropic', keyUrl: 'https://console.anthropic.com/settings/keys', keyHint: 'sk-ant-…' },
+  { id: 'codex', name: 'Codex', by: 'OpenAI', blurb: 'Use the Codex app on this computer, or your own OpenAI API key.',
+    bin: 'codex', pkg: '@openai/codex', login: ['login'], statusArgs: ['login', 'status'], site: 'https://developers.openai.com/codex',
+    apiId: 'openai', keyUrl: 'https://platform.openai.com/api-keys', keyHint: 'sk-…' },
+  { id: 'xai', name: 'Grok', by: 'xAI', blurb: 'Grok models with an xAI API key.', apiId: 'xai', keyUrl: 'https://console.x.ai', keyHint: 'xai-…' },
+  { id: 'gemini', name: 'Antigravity', by: 'Google', blurb: 'Gemini models with a Google AI Studio key.', apiId: 'gemini', keyUrl: 'https://aistudio.google.com/apikey', keyHint: 'AIza…' },
 ];
 
 const busy = new Set();
@@ -39,19 +42,14 @@ async function cliStatus(p) {
 }
 
 async function status() {
-  const s = settings.load();
-  const probe = async base => { try { const j = await models.getJson(base.replace(/\/$/, '') + '/models', { timeout: 600 }); return Array.isArray(j.data); } catch { return false; } };
-  const [lm, lcpp] = await Promise.all([probe(s.endpoints.lmstudio), probe(s.endpoints.llamacpp)]);
+  const keysSet = settings.publicView().keysSet || {};
   const out = [];
   for (const p of CATALOG) {
-    const item = { id: p.id, name: p.name, by: p.by, kind: p.kind, blurb: p.blurb, site: p.site || null, keyUrl: p.keyUrl || null, canInstall: !!p.pkg, command: p.pkg ? `npm install -g ${p.pkg}` : null, installed: false, ready: false, busy: busy.has(p.id) };
-    if (p.kind === 'cli') Object.assign(item, await cliStatus(p), { ready: false });
-    else if (p.kind === 'api') { item.installed = true; item.signedIn = !!settings.publicView().keysSet?.[p.id]; }
-    else if (p.id === 'ollama') { item.installed = !!cli.findOllama(); }
-    else if (p.id === 'lmstudio') { item.installed = lm; item.running = lm; }
-    else if (p.id === 'llamacpp') { item.installed = lcpp; item.running = lcpp; }
-    item.ready = item.installed && (p.kind === 'local' || item.signedIn);
-    out.push(item);
+    const app = p.bin ? { ...(await cliStatus(p)), canInstall: !!p.pkg, command: p.pkg ? `npm install -g ${p.pkg}` : null } : null;
+    if (app) app.ready = app.installed && app.signedIn;
+    const apiInfo = p.apiId ? { id: p.apiId, hasKey: !!keysSet[p.apiId], keyUrl: p.keyUrl, keyHint: p.keyHint } : null;
+    out.push({ id: p.id, name: p.name, by: p.by, blurb: p.blurb, site: p.site || null, app, api: apiInfo,
+      ready: !!(app?.ready || apiInfo?.hasKey), busy: busy.has(p.id) });
   }
   return out;
 }
@@ -89,7 +87,7 @@ async function install(id, onLine) {
 // Opens the provider's own browser sign-in.
 async function signIn(id, onLine) {
   const p = find(id);
-  if (!p || p.kind !== 'cli') throw new Error('Nothing to sign in to.');
+  if (!p || !p.bin) throw new Error('Nothing to sign in to.');
   const r = cli.resolveCli(p.bin);
   if (!r) throw new Error(`${p.name} is not installed yet.`);
   if (busy.has(id)) throw new Error('Already working on it.');
@@ -101,4 +99,22 @@ async function signIn(id, onLine) {
   } finally { busy.delete(id); }
 }
 
-module.exports = { status, install, signIn, stream, CATALOG };
+// Tries a key against the provider before it is saved: lists the models it can use.
+async function checkKey(apiId, key) {
+  const cfg = models.CLOUD_APIS[apiId];
+  if (!cfg) throw new Error('Unknown provider');
+  key = key.trim();
+  if (!key || key.length < 8 || /\s/.test(key)) return { ok: false, error: 'That does not look like an API key. Paste the whole key, with no spaces.' };
+  try {
+    const j = await models.getJson(cfg.base + '/models' + (apiId === 'anthropic' ? '?limit=100' : ''), { headers: models.apiHeaders(apiId, key), timeout: 8000 });
+    const n = (j.data || []).map(m => String(m.id).replace(/^models\//, '')).filter(cfg.filter).length;
+    return { ok: true, count: n };
+  } catch (e) {
+    const m = String(e.message || e);
+    if (/HTTP (400|401|403)/.test(m)) return { ok: false, error: `${cfg.name} did not accept this key. Check that you copied all of it.` };
+    if (/abort|fetch failed|ENOTFOUND|ECONN/i.test(m)) return { ok: false, error: 'Could not reach the service. Check your internet connection.' };
+    return { ok: false, error: m };
+  }
+}
+
+module.exports = { status, install, signIn, checkKey, stream, CATALOG };

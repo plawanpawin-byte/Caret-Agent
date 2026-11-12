@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('caret', {
     create: call('term:create'), list: call('term:list'), run: call('term:run'), kill: call('term:kill'), close: call('term:close'),
     onData: listen('term:data'), onExit: listen('term:exit'), onCreated: listen('term:created'), onClosed: listen('term:closed'), onUrl: listen('term:url'),
   },
-  providers: { status: call('providers:status'), install: call('providers:install'), signIn: call('providers:signIn'), onProgress: listen('providers:progress') },
+  providers: { status: call('providers:status'), install: call('providers:install'), signIn: call('providers:signIn'), checkKey: call('providers:checkKey'), onProgress: listen('providers:progress') },
   models: { catalog: call('models:catalog'), hardware: call('models:hardware') },
   agent: {
     list: call('agent:list'), get: call('agent:get'), create: call('agent:new'), rename: call('agent:rename'), remove: call('agent:delete'),

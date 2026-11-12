@@ -237,6 +237,7 @@ function registerIpc() {
   handle('providers:status', () => providers.status());
   handle('providers:install', id => providers.install(String(id), line => send('providers:progress', { id: String(id), line })).then(() => { models.catalog().catch(() => {}); return true; }));
   handle('providers:signIn', id => providers.signIn(String(id), line => send('providers:progress', { id: String(id), line })));
+  handle('providers:checkKey', (apiId, key) => providers.checkKey(String(apiId), String(key || '')));
   handle('models:catalog', opts => models.catalog(opts || {}));
   handle('models:hardware', () => models.hardware());
 

@@ -878,3 +878,75 @@ body.agent-layout .pp-list { display: block; }
 .plancard .pc-text b { color: var(--text-hi); font-weight: 600; }
 .plancard .pc-text span { color: var(--muted); font-size: 12px; }
 .plancard .actions { grid-column: 2; display: flex; gap: 6px; margin-top: 8px; }
+
+/* ---- v9: Models and API keys (one page for every AI; opened from the model menu) ---- */
+.prov-page .pp-list { display: block; width: 272px; flex: none; padding: 8px 8px 16px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; }
+.pl-head { padding: 14px 10px 12px; }
+.pl-title { font-size: 15px; font-weight: 600; color: var(--text-hi); }
+.pl-sub { margin-top: 2px; color: var(--faint); font-size: 12px; }
+.pl-row { display: flex; align-items: center; gap: 11px; width: 100%; padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--text); text-align: left; }
+.pl-row:hover { background: var(--hover); }
+.pl-row.on { background: var(--sel); }
+.pl-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pl-name { font-weight: 600; color: var(--text-hi); }
+.pl-by { font-size: 12px; color: var(--faint); }
+.pl-state { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.prov-page .dot { width: 7px; height: 7px; border-radius: 50%; background: #555; flex: none; }
+.prov-page .dot.ok { background: var(--ok); } .prov-page .dot.warn { background: var(--warn); } .prov-page .dot.busy { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+
+.prov-page .pp-body { padding: 0; }
+.pp-wrap { max-width: 660px; margin: 0 auto; padding: 56px 32px 72px; }
+.pp-wrap .pp-hero { display: flex; align-items: center; gap: 16px; padding: 0 0 18px; border: 0; }
+.pp-wrap .pp-hero h1 { font-size: 22px; }
+.pp-wrap .pp-lead { margin: 0 0 22px; color: var(--muted); max-width: 520px; }
+.pp-seg { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 18px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); }
+.pp-seg button { height: 30px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.pp-seg button:hover { color: var(--text-hi); }
+.pp-seg button.on { background: var(--surface-2); color: var(--text-hi); }
+.pp-seg svg.i { width: 15px; height: 15px; }
+
+.pp-card { padding: 20px 22px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface); }
+.pc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.pc-title { font-size: 14px; font-weight: 600; color: var(--text-hi); }
+.pc-badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11.5px; background: rgba(107,191,134,.14); color: var(--ok); }
+.pc-badge svg { width: 12px; height: 12px; stroke-width: 2.4; }
+.pc-text { margin: 0 0 16px; color: var(--muted); line-height: 1.55; }
+.pc-label { display: flex; align-items: center; margin-bottom: 8px; font-size: 12.5px; font-weight: 500; color: var(--text); }
+.pc-label .grow { flex: 1; }
+.pc-foot { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.pc-foot .btn { height: 32px; padding: 0 16px; }
+.pc-secure { display: flex; align-items: flex-start; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12px; line-height: 1.5; }
+.pc-secure svg { width: 14px; height: 14px; margin-top: 2px; }
+
+.key-field { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 6px 0 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--bg); transition: border-color .12s, box-shadow .12s; }
+.key-field:focus-within { border-color: #6a6a6a; box-shadow: 0 0 0 3px rgba(255,255,255,.05); }
+.key-field.err { border-color: rgba(229,103,93,.7); }
+.key-field > svg.i { color: var(--faint); }
+.key-input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: var(--text-hi); font: 13px var(--mono); letter-spacing: .02em; }
+.key-input::placeholder { color: var(--faint); font-family: var(--mono); }
+.key-status { min-height: 20px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.key-status.err { color: #f0948b; }
+.key-saved { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 8px 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.key-saved .ks-dots { color: var(--faint); letter-spacing: .12em; font-size: 12px; }
+.key-saved .grow { flex: 1; }
+.pc-models { margin-top: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mchip { height: 24px; line-height: 22px; padding: 0 9px; border: 1px solid var(--border); border-radius: 12px; font: 11.5px var(--mono); color: var(--muted); }
+.mchip.more { font-family: var(--font); }
+
+.ps-list { list-style: none; margin: 0; padding: 0; }
+.ps-row { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 8px 0; border-top: 1px solid var(--border); color: var(--text); }
+.ps-row:first-child { border-top: 0; }
+.ps-dot { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; font-style: normal; }
+.ps-row.done .ps-dot { background: var(--ok); border-color: var(--ok); color: #10200f; }
+.ps-dot svg { width: 12px; height: 12px; stroke-width: 2.6; }
+.ps-text { flex: 1; }
+.ps-row.done .ps-text { color: var(--muted); }
+.ps-row .btn { height: 28px; }
+.pp-cmd { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--faint); }
+.pp-cmd code { display: block; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font: 12px/1.4 var(--mono); color: var(--text-hi); user-select: text; }
+.pp-wrap .pp-log { margin-top: 12px; max-width: none; }
+@media (max-width: 1000px) { .prov-page .pp-list { width: 220px; } .pl-state { display: none; } }
+.key-status:empty { min-height: 0; margin: 0; }
+.key-status { margin-top: 8px; }
+.pp-card .pc-foot { margin-top: 14px; }

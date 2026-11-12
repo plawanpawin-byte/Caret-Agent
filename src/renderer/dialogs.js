@@ -100,9 +100,9 @@ function renderModels(list, cat) {
       rows.push(h('div', { class: 'model-line' }, brand(p.id, 30), h('span', { class: 'grow' }, h('div', { class: 'n', text: p.name }), h('div', { class: 's', text: 'Found on this computer — uses your own sign-in' })), h('span', { class: 'status-ok', text: 'Ready' })));
     }
   }
-  if (!rows.length) rows.push(h('div', { class: 'model-line' }, icon('alert'), h('span', { class: 'grow' }, h('div', { class: 'n', text: 'No AI found yet' }), h('div', { class: 's', text: 'Install Claude Code or Codex from AI providers after setup.' }))));
+  if (!rows.length) rows.push(h('div', { class: 'model-line' }, icon('alert'), h('span', { class: 'grow' }, h('div', { class: 'n', text: 'No AI found yet' }), h('div', { class: 's', text: 'Set up Claude, Codex, Grok or Antigravity from the model menu after setup.' }))));
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: cat.auto.key ? `Auto will use ${(cat.providers.find(p => p.id === cat.auto.key.split(':')[0]) || {}).name || cat.auto.key}.` : cat.auto.reason }));
-  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Install Claude Code or Codex, or connect Grok, Antigravity and ChatGPT, any time from AI providers.' }));
+  rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Set up Claude, Codex, Grok or Antigravity any time from the model menu in the prompt bar.' }));
   list.replaceChildren(...rows);
 }
 
@@ -121,11 +121,11 @@ export function openSettings(section) {
     h('div', { class: 'setting' }, h('div', { class: 'l', text: 'Role' }), role),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Default view', h('small', { text: 'Which layout opens first' })), layout),
     h('div', { class: 'section-title', id: 'models-section', text: 'AI' }),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'AI providers', h('small', { text: 'Install, sign in, connect' })),
+    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Models and API keys', h('small', { text: 'App or API key' })),
       h('div', {},
-        h('div', { class: 'ai-row' }, ...['claude', 'codex', 'xai', 'gemini', 'openai'].map(id => brand(id, 28))),
-        h('div', { class: 'muted', style: { margin: '8px 0' }, text: 'Claude Code and Codex use your own sign-in. Grok, Antigravity and ChatGPT use an API key, kept encrypted on this computer. All of it is set up in one place.' }),
-        h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('extensions'), 'Open AI providers'))),
+        h('div', { class: 'ai-row' }, ...['claude', 'codex', 'xai', 'gemini'].map(id => brand(id, 28))),
+        h('div', { class: 'muted', style: { margin: '8px 0' }, text: 'Claude and Codex can run as an app on this computer or through an API key. Grok and Antigravity use an API key. Keys are kept encrypted on this computer, and all of it is set up in one place.' }),
+        h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('key'), 'Open models and API keys'))),
     h('div', { class: 'section-title', text: 'Project' }),
     h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Design guide', h('small', { text: '.caret/DESIGN.md' })),
       h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Every AI reads this before building an interface — colours, spacing, what to avoid. Edit it to match your taste.' }),

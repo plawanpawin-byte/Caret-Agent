@@ -345,7 +345,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
     if (!base) throw new Error(`Unknown provider ${pick.provider}`);
     const key = models.CLOUD_APIS[pick.provider] ? settings.getKey(pick.provider) : null;
     if (models.CLOUD_APIS[pick.provider] && !key) throw new Error(`Add your ${models.CLOUD_APIS[pick.provider].name} key in Settings first.`);
-    transport = (msgs, tl) => llm.openaiChat({ base, key, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal });
+    transport = (msgs, tl) => llm.openaiChat({ base, key, headers: key && models.CLOUD_APIS[pick.provider] ? models.apiHeaders(pick.provider, key) : undefined, model: pick.model, messages: msgs, tools: tl, signal: run.abort.signal });
   }
 
   let toolsOn = defs.length > 0;

@@ -81,7 +81,7 @@ async function boot() {
       { label: 'Side bar', key: 'Ctrl+B', icon: 'sidebar', onClick: () => emit('cmd', 'toggle-sidebar') },
       { label: 'Terminal', key: 'Ctrl+`', icon: 'terminal', onClick: () => emit('cmd', 'toggle-bottom') },
       { label: state.layout === 'agent' ? 'Files' : 'AI panel', key: 'Ctrl+Alt+B', icon: 'files', onClick: () => emit('cmd', 'toggle-chat') }, 'sep',
-      { label: 'AI providers', key: 'Ctrl+Shift+X', icon: 'extensions', onClick: () => emit('cmd', 'providers') },
+      { label: 'Models and API keys', key: 'Ctrl+Shift+X', icon: 'key', onClick: () => emit('cmd', 'providers') },
       { label: state.layout === 'agent' ? 'Open IDE' : 'Exit IDE (Agent)', icon: state.layout === 'agent' ? 'code' : 'agent', onClick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') },
     ],
     Help: () => [
@@ -131,7 +131,6 @@ async function boot() {
   const activityItems = {
     explorer: h('button', { class: 'icon-btn on', title: 'Explorer (Ctrl+Shift+E)', onclick: () => goSide('explorer') }, icon('files')),
     search: h('button', { class: 'icon-btn', title: 'Search (Ctrl+Shift+F)', onclick: () => goSide('search') }, icon('search')),
-    providers: h('button', { class: 'icon-btn', title: 'AI providers (Ctrl+Shift+X)', onclick: () => goSide('providers') }, icon('extensions')),
   };
   function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which, true); }
   const actMore = h('button', { class: 'icon-btn', title: 'More', onclick: () => menu(actMore, [
@@ -142,8 +141,8 @@ async function boot() {
     { label: 'Settings', icon: 'settings', key: 'Ctrl+,', onClick: () => openSettings() },
   ]) }, icon('down'));
   // One row of tools at the top of the side panel (no separate left rail).
-  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, activityItems.providers, h('span', { class: 'grow' }), actMore);
-  $('sidebar').append(toolRow, explorer.el, search.el, providersPanel.el);
+  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, h('span', { class: 'grow' }), actMore);
+  $('sidebar').append(toolRow, explorer.el, search.el);
   $('editor-area').append(editorArea.el);
   $('bottom').append(terminal.el);
 
@@ -153,13 +152,10 @@ async function boot() {
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', k === which);
     explorer.el.classList.toggle('hidden', which !== 'explorer');
     search.el.classList.toggle('hidden', which !== 'search');
-    providersPanel.el.classList.toggle('hidden', which !== 'providers');
     side = which;
     if (which === 'search') search.focus();
-    if (which === 'providers') providersPanel.load();
   }
   search.el.classList.add('hidden');
-  providersPanel.el.classList.add('hidden');
 
   // ---------- agent layout ----------
   // A desktop agent, not an IDE: your projects and chats on the left, the conversation in the middle.
@@ -167,12 +163,12 @@ async function boot() {
   const chatFilter = h('input', { class: 'ag-filter hidden', placeholder: 'Search chats', spellcheck: 'false' });
   const sessionList = h('div', { class: 'ag-chats' });
   const projList = h('div', { class: 'ag-projects' });
-  const agModel = h('button', { class: 'ag-ai', title: 'AI providers', onclick: () => providersPanel.openList() });
+  const agModel = h('button', { class: 'ag-ai', title: 'Models and API keys', onclick: () => providersPanel.openList() });
   $('sessions').append(
     h('div', { class: 'ag-nav' },
       h('button', { class: 'ag-item strong', onclick: () => chat.newChat() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
       h('button', { class: 'ag-item', onclick: () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } } }, icon('search'), h('span', { class: 'grow', text: 'Search chats' })),
-      h('button', { class: 'ag-item', onclick: () => providersPanel.openList() }, icon('extensions'), h('span', { class: 'grow', text: 'AI providers' }))),
+    ),
     h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Projects' }),
       h('button', { class: 'icon-btn', title: 'Open a folder', onclick: () => emit('cmd', 'open-folder') }, icon('plus'))),
     projList,
@@ -180,10 +176,10 @@ async function boot() {
     chatFilter, sessionList,
     h('div', { class: 'ag-foot' }, agModel,
       h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))));
-  // Going to a chat or a project from the side bar leaves the AI providers page.
+  // Going to a chat or a project from the side bar leaves the models page.
   $('sessions').addEventListener('click', e => {
     const b = e.target.closest('button');
-    if (b && b !== agModel && !b.textContent.includes('AI providers') && !b.closest('.ag-foot')) providersPanel.close();
+    if (b && b !== agModel && !b.closest('.ag-foot')) providersPanel.close();
   }, true);
   $('filespane').append(filesExplorer.el);
   const agentTerm = h('div', { class: 'col hidden', style: { height: '220px', borderTop: '1px solid var(--border)', background: 'var(--panel)' } });
@@ -226,8 +222,8 @@ async function boot() {
     const auto = !s.model || s.model === 'auto';
     const key = auto ? state.catalog?.auto?.key : s.model;
     const label = auto ? (key ? `Auto · ${modelLabel(key).split(" (")[0]}` : state.catalog ? 'No AI set up' : 'Auto') : modelLabel(s.model);
-    agModel.title = auto && state.catalog?.auto?.reason ? state.catalog.auto.reason : 'AI providers';
-    agModel.replaceChildren(h('i', { class: 'dot ' + (key ? 'ok' : 'off') }), h('span', { class: 'grow', text: label }), icon('extensions'));
+    agModel.title = auto && state.catalog?.auto?.reason ? state.catalog.auto.reason : 'Models and API keys';
+    agModel.replaceChildren(h('i', { class: 'dot ' + (key ? 'ok' : 'off') }), h('span', { class: 'grow', text: label }), icon('down'));
   }
   on('settings', paintAi); on('catalog', paintAi); paintAi();
   getCatalog().catch(() => {});
@@ -348,7 +344,8 @@ async function boot() {
       }
       else if (c === 'focus-chat') { if (state.layout === 'studio') showPane('chatpane', true); chat.focus(); }
       else if (c === 'settings-models') openSettings('models');
-      else if (c === 'providers') goSide('providers');
+      else if (c === 'providers') providersPanel.openList();
+      else if (c?.providers) providersPanel.openList(c.providers, c.method);
       else if (c === 'search') { goSide('search'); }
     } catch (e) { toast(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), { error: true }); }
   });
@@ -366,7 +363,7 @@ async function boot() {
     else if (k === ',') { e.preventDefault(); openSettings(); }
     else if (k === 'f' && e.shiftKey) { e.preventDefault(); goSide('search'); }
     else if (k === 'e' && e.shiftKey) { e.preventDefault(); goSide('explorer'); }
-    else if (k === 'x' && e.shiftKey) { e.preventDefault(); goSide('providers'); }
+    else if (k === 'x' && e.shiftKey) { e.preventDefault(); providersPanel.openList(); }
   });
   // Dropping files onto the window must never navigate away.
   addEventListener('dragover', e => e.preventDefault());

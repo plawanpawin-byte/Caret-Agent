@@ -71,6 +71,9 @@ const P = {
   bug: '<rect x="7" y="8" width="10" height="12" rx="5"/><path d="M9 8V6a3 3 0 0 1 6 0v2M3 13h4M17 13h4M4 19l3-2M20 19l-3-2M4 7l3 2M20 7l-3 2"/>',
   rocket: '<path d="M14 4c3 0 6 3 6 6l-6 6-6-6 6-6z"/><path d="M8 10l-3 1-2 3 4 1M14 16l-1 3-3 2-1-4"/><circle cx="14.5" cy="9.5" r="1.5"/>',
   wand: '<path d="M4 20 15 9M14 4v3M19 9h-3M17.5 5.5l-2 2M11 6.5 9.5 5"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4M6.4 7.5C3.8 9.3 2 12 2 12s3.5 6 10 6c1.7 0 3.2-.4 4.4-1"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
   chevronLeft: '<path d="m15 6-6 6 6 6"/>',
 };
