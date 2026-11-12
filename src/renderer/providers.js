@@ -11,7 +11,7 @@ const clean = e => String(e?.message || e).replace(/^Error invoking remote metho
 const ABOUT = {
   claude: { lead: 'Anthropic\'s Claude models. Use the Claude app on this computer, or call the API with your own key.',
     app: { title: 'Claude Code app', text: 'Runs on this computer and uses the Claude plan you already pay for. It signs in through your browser; Caret Agent never sees your login.' },
-    api: { title: 'Claude API', text: 'Pay per use with an Anthropic API key. Works without installing anything.' } },
+    api: { title: 'Claude API', text: 'Pay per use with an Anthropic API key. Works without installing anything. It goes through Anthropic\'s OpenAI-compatible endpoint, which Anthropic describes as meant for testing; for everyday work the Claude app is the safer choice.' } },
   codex: { lead: 'OpenAI\'s models. Use the Codex app on this computer, or call the OpenAI API with your own key.',
     app: { title: 'Codex app', text: 'Runs on this computer and uses your ChatGPT plan. It signs in through your browser; Caret Agent never sees your login.' },
     api: { title: 'OpenAI API', text: 'Pay per use with an OpenAI API key. This is separate from a ChatGPT plan.' } },
