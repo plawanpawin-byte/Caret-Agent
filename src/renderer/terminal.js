@@ -10,7 +10,7 @@ export function createTerminalPanel() {
   let current = null;
   const tabsEl = h('div', { style: { display: 'flex', gap: '2px', flex: 1, overflow: 'hidden' } });
   const head = h('div', { class: 'term-head' },
-    h('span', { class: 'term-title', text: 'Terminal' }),
+    h('span', { class: 'term-title' }, icon('terminal'), h('span', { text: 'Terminal' })),
     tabsEl,
     h('button', { class: 'icon-btn', title: 'New terminal', onclick: () => create() }, icon('plus')),
     h('button', { class: 'icon-btn', title: 'Stop running command (Ctrl+C)', onclick: () => current && api.term.kill(current.id) }, icon('stop')),

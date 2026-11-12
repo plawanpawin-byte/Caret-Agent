@@ -25,8 +25,12 @@ async function boot() {
 
   // ---------- title bar ----------
   const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
+  // Two views of the same project: the code editor, or the agent you talk to.
+  const viewEditor = h('button', { title: 'Code editor', onclick: () => setLayout('studio') }, icon('code'), h('span', { text: 'Editor' }));
+  const viewAgent = h('button', { title: 'Agent', onclick: () => setLayout('agent') }, icon('agent'), h('span', { text: 'Agent' }));
   $('titlebar').append(
     h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
+    h('div', { class: 'viewsw' }, viewEditor, viewAgent),
     omni, h('div', { class: 'spacer' }),
     h('div', { class: 'tools' },
       h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
@@ -51,7 +55,6 @@ async function boot() {
     providers: h('button', { class: 'icon-btn', title: 'AI providers (Ctrl+Shift+X)', onclick: () => goSide('providers') }, icon('extensions')),
   };
   function goSide(which) { if (state.layout === 'agent') { setLayout('studio'); showSide(which, true); } else showSide(which, true); }
-  const actAgent = h('button', { class: 'icon-btn', title: 'Agent view (chat first)', onclick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') }, icon('agent'));
   const actMore = h('button', { class: 'icon-btn', title: 'More', onclick: () => menu(actMore, [
     { label: 'Project memory', sub: '.caret/HANDOFF.md', icon: 'book', onClick: () => state.workspace ? emit('open-file-studio', '.caret/HANDOFF.md') : toast('Open a folder first') },
     { label: 'Open Folder…', icon: 'folderOpen', onClick: () => emit('cmd', 'open-folder') },
@@ -60,7 +63,7 @@ async function boot() {
     { label: 'Settings', icon: 'settings', sub: 'Ctrl+,', onClick: () => openSettings() },
   ]) }, icon('down'));
   // One row of tools at the top of the side panel (no separate left rail).
-  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, activityItems.providers, actAgent, actMore);
+  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, activityItems.providers, h('span', { class: 'grow' }), actMore);
   $('sidebar').append(toolRow, explorer.el, search.el, providersPanel.el);
   $('editor-area').append(editorArea.el);
   $('bottom').append(terminal.el);
@@ -155,7 +158,8 @@ async function boot() {
     document.body.classList.toggle('agent-layout', l === 'agent');
     $('studio').classList.toggle('hidden', l !== 'studio');
     $('agentview').classList.toggle('hidden', l !== 'agent');
-    actAgent.classList.toggle('on', l === 'agent');
+    viewAgent.classList.toggle('on', l === 'agent');
+    viewEditor.classList.toggle('on', l !== 'agent');
     const which = side;
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
     // The overlay page for an AI provider lives over whichever centre is showing.
@@ -263,6 +267,7 @@ async function boot() {
         if (state.layout === 'studio') showPane('bottom', c === 'show-bottom' ? true : undefined);
         else { const show = c === 'show-bottom' ? true : agentTerm.classList.contains('hidden'); agentTerm.classList.toggle('hidden', !show); if (show) agentTerm.append(terminal.el); }
       }
+      else if (c === 'focus-chat') { if (state.layout === 'studio') showPane('chatpane', true); chat.focus(); }
       else if (c === 'settings-models') openSettings('models');
       else if (c === 'providers') goSide('providers');
       else if (c === 'search') { goSide('search'); }

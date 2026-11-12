@@ -176,30 +176,31 @@ export function createEditorArea() {
   return { el, open };
 }
 
-const shortcut = (ic, label, key, fn) => h('button', { class: 'shortcut', onclick: fn }, icon(ic), h('span', { class: 'grow', text: label }), key ? h('span', { class: 'kbd', text: key }) : null);
+// One action on the start page: icon, what it does, a short line of help, and its key.
+const shortcut = (ic, label, sub, key, fn) => h('button', { class: 'shortcut', onclick: fn }, icon(ic),
+  h('span', { class: 'sc-text' }, h('span', { class: 'sc-title', text: label }), sub ? h('span', { class: 'sc-sub', text: sub }) : null),
+  key ? h('span', { class: 'sc-keys' }, ...key.split(' ').map(k => h('span', { class: 'kbd', text: k }))) : null);
 
 export function noFolder() {
   const recent = (state.settings?.recentFolders || []).slice(0, 5);
   return h('div', { class: 'watermark' },
-    markEl(),
-    h('div', { class: 'title', text: 'You have not opened a folder yet' }),
+    h('div', { class: 'wm-head' }, logo(36), h('div', { class: 'title', text: 'Open a project to start' }),
+      h('div', { class: 'wm-sub', text: 'Pick a folder on this PC, or copy one from GitHub.' })),
     h('div', { class: 'shortcuts' },
-      shortcut('folderOpen', 'Open folder', 'Ctrl O', () => emit('cmd', 'open-folder')),
-      shortcut('git', 'Clone repo', null, () => emit('cmd', 'clone'))),
+      shortcut('folderOpen', 'Open folder', 'Work on code that is already on this PC', 'Ctrl O', () => emit('cmd', 'open-folder')),
+      shortcut('git', 'Clone repository', 'Copy a project from GitHub or any Git link', null, () => emit('cmd', 'clone'))),
     recent.length ? h('div', { class: 'recent' }, h('h2', { text: 'Recent' }),
-      ...recent.map(d => h('button', { onclick: () => emit('cmd', { open: d }), title: d }, h('span', { class: 'n', text: d.split(/[\\/]/).pop() }), h('span', { class: 'p', text: d })))) : null,
+      ...recent.map(d => h('button', { onclick: () => emit('cmd', { open: d }), title: d }, icon('folder'), h('span', { class: 'n', text: d.split(/[\\/]/).pop() }), h('span', { class: 'p', text: d })))) : null,
   );
 }
 
-function markEl() { const m = logo(120); m.setAttribute('class', 'mark'); return m; }
-
 function folderWelcome() {
   return h('div', { class: 'watermark' },
-    markEl(),
-    h('div', { class: 'title', text: state.workspace.name }),
+    h('div', { class: 'wm-head' }, logo(36), h('div', { class: 'title', text: state.workspace.name }),
+      h('div', { class: 'wm-sub', text: state.workspace.root, title: state.workspace.root })),
     h('div', { class: 'shortcuts' },
-      shortcut('sparkle', 'Ask AI', 'Ctrl L', () => emit('cmd', 'focus-chat')),
-      shortcut('terminal', 'Open terminal', 'Ctrl `', () => emit('cmd', 'new-terminal')),
-      shortcut('search', 'Search in files', 'Ctrl Shift F', () => emit('cmd', 'search')),
-      shortcut('book', 'Project memory', null, () => emit('open-file', '.caret/HANDOFF.md'))));
+      shortcut('sparkle', 'Ask the AI', 'Explain, change or build something in this project', 'Ctrl L', () => emit('cmd', 'focus-chat')),
+      shortcut('search', 'Search in files', 'Find text anywhere in the project', 'Ctrl Shift F', () => emit('cmd', 'search')),
+      shortcut('terminal', 'Terminal', 'Run commands in this folder', 'Ctrl `', () => emit('cmd', 'new-terminal')),
+      shortcut('book', 'Project memory', 'What every AI knows about this project', null, () => emit('open-file', '.caret/HANDOFF.md'))));
 }

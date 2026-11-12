@@ -41,9 +41,9 @@ export function createChat() {
     h('div', { class: 'composer-row' }, modelBtn, ctxBtn, planBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
   const composerWrap = h('div', { class: 'composer-wrap' }, composer);
   // panel header: two tabs (Chat = edits you ask for, Composer = works on its own) + actions on the right
-  const tabChat = h('button', { class: 'htab', onclick: () => setTab('code') }, 'Chat');
-  const tabComposer = h('button', { class: 'htab', onclick: () => setTab('agent') }, 'Composer');
-  const subHead = h('div', { class: 'chat-head' }, tabChat, tabComposer, h('span', { class: 'grow' }),
+  const tabChat = h('button', { class: 'htab', title: 'Makes the changes you ask for', onclick: () => setTab('code') }, 'Chat');
+  const tabComposer = h('button', { class: 'htab', title: 'Works on its own until the task is done', onclick: () => setTab('agent') }, 'Composer');
+  const subHead = h('div', { class: 'chat-head' }, h('div', { class: 'hseg' }, tabChat, tabComposer), h('span', { class: 'grow' }),
     h('button', { class: 'icon-btn', title: 'New chat (Ctrl+T)', onclick: () => newChat() }, icon('plus')),
     h('button', { class: 'icon-btn', title: 'Past chats', onclick: e => historyMenu(e.currentTarget) }, icon('history')),
     h('button', { class: 'icon-btn', title: 'Open in Agent view', onclick: () => emit('cmd', { layout: 'agent' }) }, icon('expand')));
