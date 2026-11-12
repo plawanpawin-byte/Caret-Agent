@@ -176,6 +176,20 @@ function registerIpc() {
 
   handle('app:info', () => ({ platform: process.platform, version: app.getVersion(), user: require('os').userInfo().username }));
   handle('app:openExternal', url => openExternalSafe(url));
+  // Looks at the newest GitHub release. Offline or no release yet counts as "nothing newer".
+  handle('app:checkUpdate', async () => {
+    const cur = app.getVersion();
+    try {
+      const r = await net.fetch('https://api.github.com/repos/plawanpawin-byte/Caret-Agent/releases/latest', { headers: { 'User-Agent': 'caret-agent' } });
+      if (!r.ok) return { current: cur, latest: cur, newer: false };
+      const j = await r.json();
+      const latest = String(j.tag_name || '').replace(/^v/i, '') || cur;
+      const n = s => s.split('.').map(x => parseInt(x, 10) || 0);
+      const a = n(latest), b = n(cur);
+      const newer = [0, 1, 2].some(i => { for (let k = 0; k < i; k++) if (a[k] !== b[k]) return false; return (a[i] || 0) > (b[i] || 0); });
+      return { current: cur, latest, newer, url: j.html_url };
+    } catch { return { current: cur, latest: cur, newer: false }; }
+  });
   handle('app:preview', url => openPreview(url));
 
   handle('workspace:pick', async () => {

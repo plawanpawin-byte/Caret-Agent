@@ -25,12 +25,68 @@ async function boot() {
 
   // ---------- title bar ----------
   const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
-  // Two views of the same project: the code editor, or the agent you talk to.
-  const viewEditor = h('button', { title: 'Code editor', onclick: () => setLayout('studio') }, icon('code'), h('span', { text: 'Editor' }));
-  const viewAgent = h('button', { title: 'Agent', onclick: () => setLayout('agent') }, icon('agent'), h('span', { text: 'Agent' }));
+  // Left of the title bar: the view you are in (a menu), then File / Edit / View / Help.
+  const viewName = h('span', { text: 'IDE' });
+  const viewBtn = h('button', { class: 'viewbtn', title: 'Switch view', onclick: () => viewMenu() }, viewName, icon('down'));
+  async function checkUpdate() {
+    toast('Checking for updates…');
+    const r = await api.app.checkUpdate().catch(() => null);
+    if (r?.newer) { toast(`Version ${r.latest} is available (you have ${r.current})`); if (r.url) api.app.openExternal(r.url); }
+    else toast(`No updates here — you are on the latest version (${r?.current || state.info?.version})`);
+  }
+  function viewMenu() {
+    const inIde = state.layout !== 'agent';
+    menu(viewBtn, inIde ? [
+      { label: 'Check for updates', icon: 'refresh', onClick: checkUpdate },
+      'sep',
+      { label: 'Exit IDE', sub: 'Back to the Agent', icon: 'agent', onClick: () => setLayout('agent') },
+    ] : [
+      { label: 'Open IDE', sub: 'Code editor, files and terminal', icon: 'code', onClick: () => setLayout('studio') },
+      'sep',
+      { label: 'Check for updates', icon: 'refresh', onClick: checkUpdate },
+    ]);
+  }
+  const doc = c => () => { try { document.execCommand(c); } catch {} };
+  const pasteText = async () => { try { document.execCommand('insertText', false, await navigator.clipboard.readText()); } catch {} };
+  const menus = {
+    File: () => [
+      { label: 'Open Folder…', key: 'Ctrl+O', icon: 'folderOpen', onClick: () => emit('cmd', 'open-folder') },
+      { label: 'Clone Repository…', icon: 'git', onClick: () => cloneDialog() },
+      ...((state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 5).length ? ['sep', { group: 'Recent' },
+        ...(state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 5).map(d => ({ label: d.split(/[\\/]/).pop(), sub: d, icon: 'folder', onClick: () => emit('cmd', { open: d }) }))] : []),
+      'sep',
+      { label: 'Close Folder', icon: 'x', disabled: !state.workspace, onClick: () => emit('cmd', 'close-folder') },
+      { label: 'Settings', key: 'Ctrl+,', icon: 'settings', onClick: () => openSettings() },
+    ],
+    Edit: () => [
+      { label: 'Undo', key: 'Ctrl+Z', onClick: doc('undo') }, { label: 'Redo', key: 'Ctrl+Y', onClick: doc('redo') }, 'sep',
+      { label: 'Cut', key: 'Ctrl+X', onClick: doc('cut') }, { label: 'Copy', key: 'Ctrl+C', onClick: doc('copy') }, { label: 'Paste', key: 'Ctrl+V', onClick: pasteText },
+      { label: 'Select all', key: 'Ctrl+A', onClick: doc('selectAll') }, 'sep',
+      { label: 'Search in files', key: 'Ctrl+Shift+F', icon: 'search', onClick: () => emit('cmd', 'search') },
+    ],
+    View: () => [
+      { label: 'Side bar', key: 'Ctrl+B', icon: 'sidebar', onClick: () => emit('cmd', 'toggle-sidebar') },
+      { label: 'Terminal', key: 'Ctrl+`', icon: 'terminal', onClick: () => emit('cmd', 'toggle-bottom') },
+      { label: state.layout === 'agent' ? 'Files' : 'AI panel', key: 'Ctrl+Alt+B', icon: 'files', onClick: () => emit('cmd', 'toggle-chat') }, 'sep',
+      { label: 'AI providers', key: 'Ctrl+Shift+X', icon: 'extensions', onClick: () => emit('cmd', 'providers') },
+      { label: state.layout === 'agent' ? 'Open IDE' : 'Exit IDE (Agent)', icon: state.layout === 'agent' ? 'code' : 'agent', onClick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') },
+    ],
+    Help: () => [
+      { label: 'Project memory', sub: '.caret/HANDOFF.md', icon: 'book', disabled: !state.workspace, onClick: () => emit('open-file-studio', '.caret/HANDOFF.md') },
+      { label: 'Caret Agent on GitHub', icon: 'git', onClick: () => api.app.openExternal('https://github.com/plawanpawin-byte/Caret-Agent') },
+      'sep', { label: 'Check for updates', icon: 'refresh', onClick: checkUpdate },
+      { note: `Caret Agent ${state.info?.version || ''}` },
+    ],
+  };
+  const menubar = h('div', { class: 'menubar' }, ...Object.entries(menus).map(([name, items]) => {
+    const b = h('button', { text: name, onclick: () => { menu(b, items()); b.classList.add('open'); } });
+    b.addEventListener('mouseenter', () => { if (document.querySelector('.menu') && menubar.querySelector('.open')) { menu(b, items()); menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); b.classList.add('open'); } });
+    return b;
+  }));
+  document.addEventListener('mousedown', e => { if (!e.target.closest('.menubar')) menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); }, true);
   $('titlebar').append(
     h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
-    h('div', { class: 'viewsw' }, viewEditor, viewAgent),
+    viewBtn, menubar,
     omni, h('div', { class: 'spacer' }),
     h('div', { class: 'tools' },
       h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
@@ -41,7 +97,7 @@ async function boot() {
   function folderMenu(anchor) {
     const recent = (state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 8);
     menu(anchor, [
-      { label: 'Open Folder…', icon: 'folderOpen', sub: 'Ctrl+O', onClick: () => emit('cmd', 'open-folder') },
+      { label: 'Open Folder…', icon: 'folderOpen', key: 'Ctrl+O', onClick: () => emit('cmd', 'open-folder') },
       { label: 'Clone Repository…', icon: 'git', onClick: () => cloneDialog() },
       ...(state.workspace ? [{ label: 'Close Folder', icon: 'x', onClick: () => emit('cmd', 'close-folder') }] : []),
       ...(recent.length ? ['sep', { group: 'Recent' }, ...recent.map(d => ({ label: d.split(/[\\/]/).pop(), sub: d, icon: 'folder', onClick: () => emit('cmd', { open: d }) }))] : []),
@@ -60,7 +116,7 @@ async function boot() {
     { label: 'Open Folder…', icon: 'folderOpen', onClick: () => emit('cmd', 'open-folder') },
     { label: 'Clone Repository…', icon: 'git', onClick: () => cloneDialog() },
     'sep',
-    { label: 'Settings', icon: 'settings', sub: 'Ctrl+,', onClick: () => openSettings() },
+    { label: 'Settings', icon: 'settings', key: 'Ctrl+,', onClick: () => openSettings() },
   ]) }, icon('down'));
   // One row of tools at the top of the side panel (no separate left rail).
   const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, activityItems.providers, h('span', { class: 'grow' }), actMore);
@@ -158,8 +214,7 @@ async function boot() {
     document.body.classList.toggle('agent-layout', l === 'agent');
     $('studio').classList.toggle('hidden', l !== 'studio');
     $('agentview').classList.toggle('hidden', l !== 'agent');
-    viewAgent.classList.toggle('on', l === 'agent');
-    viewEditor.classList.toggle('on', l !== 'agent');
+    viewName.textContent = l === 'agent' ? 'Agent' : 'IDE';
     const which = side;
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
     // The overlay page for an AI provider lives over whichever centre is showing.

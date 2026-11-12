@@ -118,6 +118,7 @@ export function menu(anchor, items, { align = 'left', above = false, x, y } = {}
     const b = h('button', { class: 'mi' + (it.disabled ? ' disabled' : ''), role: 'menuitem', onclick: () => { if (it.disabled) return; closeMenu(); it.onClick?.(); } },
       it.icon ? icon(it.icon) : null,
       h('span', { class: 'grow' }, h('span', { text: it.label }), ...(it.tags || []).map(t => h('span', { class: 'tag' + (t.good ? ' good' : ''), text: t.text || t })), it.sub ? h('span', { class: 'sub', text: it.sub }) : null),
+      it.key ? h('span', { class: 'mkey', text: it.key }) : null,
       it.checked ? icon('check', 'check') : null);
     el.append(b);
   }

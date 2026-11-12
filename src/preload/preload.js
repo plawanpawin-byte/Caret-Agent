@@ -12,7 +12,7 @@ const listen = (ch) => (fn) => {
 
 contextBridge.exposeInMainWorld('caret', {
   settings: { get: call('settings:get'), update: call('settings:update'), setKey: call('settings:setKey') },
-  app: { info: call('app:info'), openExternal: call('app:openExternal'), preview: call('app:preview') },
+  app: { info: call('app:info'), openExternal: call('app:openExternal'), checkUpdate: call('app:checkUpdate'), preview: call('app:preview') },
   workspace: {
     pick: call('workspace:pick'), openRecent: call('workspace:openRecent'), clone: call('workspace:clone'),
     current: call('workspace:current'), close: call('workspace:close'),
