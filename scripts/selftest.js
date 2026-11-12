@@ -282,6 +282,44 @@ async function t(name, fn) {
     }
   });
 
+  await t('a Claude Code that keeps re-running failing commands is stopped by the runner', async () => {
+    // A stand-in for the claude program: a Bash command, its failed result, again and again.
+    const stub = path.join(os.tmpdir(), 'caret-stub-claude-' + process.pid + '.js');
+    fs.writeFileSync(stub, `
+      let n = 0;
+      const timer = setInterval(() => {
+        n++;
+        console.log(JSON.stringify({ type: 'assistant', session_id: 's1', message: { content: [{ type: 'tool_use', id: 't' + n, name: 'Bash', input: { command: 'npm run build -- --try ' + n } }] } }));
+        console.log(JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't' + n, is_error: true, content: 'Exit code 1' }] } }));
+      }, 100);
+      setTimeout(() => clearInterval(timer), 60000);
+    `);
+    const cliPath = require.resolve('../src/main/cli');
+    const runnersPath = require.resolve('../src/main/runners');
+    const realCli = require(cliPath).resolveCli;
+    require(cliPath).resolveCli = () => ({ cmd: process.execPath, args: [stub], env: { ELECTRON_RUN_AS_NODE: '1' } });
+    // Claude's runner writes its settings files under the app's data folder; under plain Node there is no app, so lend it one.
+    const electronPath = require.resolve('electron');
+    const realElectron = require.cache[electronPath];
+    require.cache[electronPath] = { id: electronPath, filename: electronPath, loaded: true, exports: { app: { getPath: () => os.tmpdir() } } };
+    delete require.cache[runnersPath];
+    try {
+      const { runClaude } = require('../src/main/runners');
+      const seen = [];
+      const h = runClaude({ tabId: 'stubtab', model: 'default', mode: 'agent', permission: 'full', prompt: 'x', system: 's', sessionId: null, bridge: null, images: [], on: { text() {}, thinking() {}, fileChanged() {}, tool: e => seen.push(e) } });
+      const r = await Promise.race([h.done, new Promise(res => setTimeout(() => res({ error: 'NOT STOPPED' }), 20000))]);
+      h.stop();
+      // each try is a different command, so it is the "4 failures in a row" rule that stops it
+      assert.match(r.error, /Stopped: 4 commands in a row failed/);
+      assert.ok(seen.filter(e => e.status === 'error').length <= 5, 'it did not keep going');
+    } finally {
+      if (realElectron) require.cache[electronPath] = realElectron; else delete require.cache[electronPath];
+      require(cliPath).resolveCli = realCli;
+      delete require.cache[runnersPath];
+      fs.rmSync(stub, { force: true });
+    }
+  });
+
   await t('write_file refuses once when it would drop most of a file; failed commands are recognised', async () => {
     const tools = require('../src/main/tools');
     const { failedRun } = require('../src/main/agent');
