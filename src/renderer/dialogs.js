@@ -35,6 +35,13 @@ export function onboarding() {
     const box = h('div', { class: 'modal onboard' });
     const o = overlay(box, { dismiss: false });
 
+    // Saves the answers and closes the dialog; with openModels, the Models page opens right after.
+    async function finish(openModels) {
+      await saveSettings({ name: data.name.trim().slice(0, 60), role: data.role, layout: data.layout, onboarded: true });
+      o.remove(); resolve();
+      if (openModels) emit('cmd', 'providers');
+    }
+
     function render() {
       const steps = h('div', { class: 'steps' }, ...[0, 1, 2].map(i => h('i', { class: i <= step ? 'on' : '' })));
       let body, canNext = true;
@@ -65,14 +72,13 @@ export function onboarding() {
           h('h1', { text: 'Your AI' }),
           h('p', { class: 'lead', text: 'Caret Agent works through the AI accounts you already have. The app itself is free.' }),
           list);
-        refreshCatalog({ mode: 'code' }).then(cat => renderModels(list, cat));
+        refreshCatalog({ mode: 'code' }).then(cat => renderModels(list, cat, () => finish(true)));
       }
       const foot = h('div', { class: 'foot' },
         step > 0 ? h('button', { class: 'btn ghost', onclick: () => { step--; render(); } }, 'Back') : h('span'),
         h('button', { class: 'btn primary', disabled: !canNext, onclick: async () => {
           if (step < 2) { step++; render(); return; }
-          await saveSettings({ name: data.name.trim().slice(0, 60), role: data.role, layout: data.layout, onboarded: true });
-          o.remove(); resolve();
+          await finish(false);
         } }, step < 2 ? 'Continue' : 'Start building'));
       box.replaceChildren(steps, body, foot);
     }
@@ -80,7 +86,7 @@ export function onboarding() {
   });
 }
 
-function renderModels(list, cat) {
+function renderModels(list, cat, onSetup) {
   if (!cat) { list.replaceChildren(h('div', { class: 'muted', text: 'Could not check for models.' })); return; }
   const hw = cat.hardware;
   const rows = [];
@@ -103,6 +109,7 @@ function renderModels(list, cat) {
   if (!rows.length) rows.push(h('div', { class: 'model-line' }, icon('alert'), h('span', { class: 'grow' }, h('div', { class: 'n', text: 'No AI found yet' }), h('div', { class: 's', text: 'Set up Claude, Codex, Grok or Antigravity from the model menu after setup.' }))));
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' }, text: cat.auto.key ? `Auto will use ${(cat.providers.find(p => p.id === cat.auto.key.split(':')[0]) || {}).name || cat.auto.key}.` : cat.auto.reason }));
   rows.push(h('div', { class: 'muted', style: { fontSize: '12px' }, text: 'Set up Claude, Codex, Grok or Antigravity any time from the model menu in the prompt bar.' }));
+  if (onSetup) rows.push(h('div', { style: { marginTop: '8px' } }, h('button', { class: 'btn', onclick: onSetup }, icon('key'), 'Set up an AI')));
   list.replaceChildren(...rows);
 }
 
