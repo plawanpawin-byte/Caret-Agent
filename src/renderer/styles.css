@@ -853,3 +853,8 @@ body.agent-layout .pp-list { display: block; }
 .filespane .row { height: 24px; border-radius: 6px; }
 .filespane .row.sel { background: var(--surface-2); }
 #agent-center .term-head, #agent-center .bottom { background: transparent; }
+
+/* Thai glyphs come out small next to Latin ones in the system fonts: scale them up a little, Thai range only. */
+@font-face { font-family: "Caret Thai"; src: local("Leelawadee UI"), local("Noto Sans Thai"), local("Tahoma"); unicode-range: U+0E00-0E7F; size-adjust: 114%; }
+@font-face { font-family: "Caret Thai"; font-weight: 700; src: local("Leelawadee UI Bold"), local("Noto Sans Thai Bold"), local("Tahoma Bold"); unicode-range: U+0E00-0E7F; size-adjust: 114%; }
+:root { --font: "Caret Thai", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans Thai", "Leelawadee UI", Roboto, sans-serif; }
