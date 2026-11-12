@@ -237,7 +237,13 @@ export function createChat() {
     await saveSettings({ mode: 'agent' });
     c.running = true; updateComposer(); renderAll();
     const s = state.settings;
-    await api.agent.send({ tabId: c.id, text: 'Looks good. Start coding the plan now and check that it works.', images: [], mode: 'agent', permission: s.permission, model: s.model || 'auto' });
+    try {
+      await api.agent.send({ tabId: c.id, text: 'Looks good. Start coding the plan now and check that it works.', images: [], mode: 'agent', permission: s.permission, model: s.model || 'auto' });
+    } catch (e) {
+      // It could not start (for example the chat is still busy): do not leave the chat looking like it is working.
+      c.running = false; c.planReady = true; updateComposer(); renderAll();
+      toast(String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), { error: true });
+    }
   }
 
   let renderQueued = false;
@@ -504,7 +510,12 @@ export function createChat() {
     textarea.value = ''; attachments = []; drafts.delete(activeId); renderAttachments(); autosize();
     c.running = true; updateComposer();
     const s = state.settings;
-    await api.agent.send({ tabId: activeId, text: full, images: images.map(i => ({ dataUrl: i.dataUrl })), mode: s.mode, permission: s.permission, model: s.model || 'auto' });
+    try {
+      await api.agent.send({ tabId: activeId, text: full, images: images.map(i => ({ dataUrl: i.dataUrl })), mode: s.mode, permission: s.permission, model: s.model || 'auto' });
+    } catch (e) {
+      c.running = false; updateComposer();   // it never started: do not leave the chat looking busy
+      toast(String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), { error: true });
+    }
   }
 
   // ---------- wiring ----------
