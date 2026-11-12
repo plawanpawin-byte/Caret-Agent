@@ -170,11 +170,11 @@ async function boot() {
   const agModel = h('button', { class: 'ag-ai', title: 'Models and API keys', onclick: () => providersPanel.openList() });
   $('sessions').append(
     h('div', { class: 'ag-nav' },
-      h('button', { class: 'ag-item strong', onclick: () => chat.newChat() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
+      h('button', { class: 'ag-item strong', onclick: () => newTask() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
       h('button', { class: 'ag-item', onclick: () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } } }, icon('search'), h('span', { class: 'grow', text: 'Search chats' })),
     ),
     h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Projects' }),
-      h('button', { class: 'icon-btn', title: 'Open a folder', onclick: () => emit('cmd', 'open-folder') }, icon('plus'))),
+      h('button', { class: 'icon-btn', title: 'New project: choose a folder', onclick: () => emit('cmd', 'open-folder') }, icon('folderPlus'))),
     projList,
     h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Chats' })),
     chatFilter, sessionList,
@@ -198,29 +198,70 @@ async function boot() {
   $('agent-center').append(agTop);
   if (!store.get('agFiles', false)) $('filespane').classList.add('hidden');
 
+  // A normal chat (New task) belongs to no project. A project is a folder: its chats live under it.
   let chatRows = [];
+  let overview = { none: [], projects: [] };
+  const openProjects = new Set(store.get('openProjects', []));
+  const chatBtn = (c, nested) => h('button', { class: 'ag-chat' + (nested ? ' nested' : '') + (c.active ? ' on' : ''), title: c.title, onclick: () => selectChat(c),
+    oncontextmenu: e => { e.preventDefault(); menu(null, [
+      { label: 'Rename', icon: 'edit', onClick: () => askText('Rename chat', c.title).then(t => t && chat.rename(c.id, t)) },
+      { label: 'Delete', icon: 'trash', onClick: () => chat.deleteChat(c.id) }], { x: e.clientX, y: e.clientY }); } },
+    c.running ? h('span', { class: 'ag-run' }) : null,
+    h('span', { class: 'grow', text: c.title }), h('span', { class: 'ag-time', text: timeAgo(c.updatedAt) }));
+  async function openProject(d) {
+    if (d === state.workspace?.root) return;
+    const w = await api.workspace.openRecent(d);
+    await setWorkspace(w);
+  }
+  async function selectChat(c) {
+    try { if (c.dir !== undefined && c.dir !== (state.workspace?.root || null)) { if (c.dir) await openProject(c.dir); else { await api.workspace.close(); await setWorkspace(null); } } } catch {}
+    chat.select(c.id);
+  }
+  async function newTask() {
+    try { if (state.workspace) { await api.workspace.close(); await setWorkspace(null); } } catch {}
+    chat.newChat();
+  }
+  async function newInProject(d) {
+    try { await openProject(d); } catch {}
+    openProjects.add(d); store.set('openProjects', [...openProjects]);
+    chat.newChat();
+  }
   function paintChats() {
     const q = chatFilter.value.trim().toLowerCase();
-    const list = chatRows.filter(c => !q || c.title.toLowerCase().includes(q));
-    sessionList.replaceChildren(...(list.length ? list.map(c => h('button', { class: 'ag-chat' + (c.active ? ' on' : ''), title: c.title, onclick: () => chat.select(c.id),
-      oncontextmenu: e => { e.preventDefault(); menu(null, [
-        { label: 'Rename', icon: 'edit', onClick: () => askText('Rename chat', c.title).then(t => t && chat.rename(c.id, t)) },
-        { label: 'Delete', icon: 'trash', onClick: () => chat.deleteChat(c.id) }], { x: e.clientX, y: e.clientY }); } },
-      c.running ? h('span', { class: 'ag-run' }) : null,
-      h('span', { class: 'grow', text: c.title }), h('span', { class: 'ag-time', text: timeAgo(c.updatedAt) })))
-      : [h('div', { class: 'ag-empty', text: q ? 'No chat matches' : 'No chats yet' })]));
+    const cur = state.workspace?.root || null;
+    const live = new Map(chatRows.map(c => [c.id, c]));
+    const shape = (list, dir) => list
+      .map(c => ({ ...c, dir, active: !!live.get(c.id)?.active, running: live.get(c.id) ? live.get(c.id).running : c.running, title: live.get(c.id)?.title || c.title }))
+      .filter(c => (c.title !== 'New chat' || c.active) && (!q || c.title.toLowerCase().includes(q)));
+    const plain = shape(overview.none, null);
+    const blocks = overview.projects.map(p => {
+      const chats = shape(p.chats, p.dir);
+      const open = p.dir === cur || openProjects.has(p.dir) || (q && chats.length);
+      const row = h('div', { class: 'ag-proj-row' },
+        h('button', { class: 'ag-item' + (p.dir === cur ? ' on' : ''), title: p.dir,
+          onclick: async () => {
+            if (p.dir !== cur) { try { await openProject(p.dir); } catch {} openProjects.add(p.dir); }
+            else if (openProjects.has(p.dir)) openProjects.delete(p.dir); else openProjects.add(p.dir);
+            store.set('openProjects', [...openProjects]); paintChats();
+          } },
+          icon(open ? 'folderOpen' : 'folder'), h('span', { class: 'grow', text: p.dir.split(/[\\/]/).pop() })),
+        h('button', { class: 'icon-btn ag-add', title: 'New conversation in project', onclick: e => { e.stopPropagation(); newInProject(p.dir); } }, icon('plus')));
+      return h('div', { class: 'ag-proj' }, row, ...(open ? (chats.length ? chats.map(c => chatBtn(c, true)) : [h('div', { class: 'ag-empty nested', text: q ? 'No chat matches' : 'No conversations yet' })]) : []));
+    });
+    projList.replaceChildren(...(blocks.length ? blocks
+      : [h('button', { class: 'ag-item', onclick: () => emit('cmd', 'open-folder') }, icon('folder'), h('span', { class: 'grow muted', text: 'New project…' }))]));
+    sessionList.replaceChildren(...(plain.length ? plain.map(c => chatBtn(c, false)) : [h('div', { class: 'ag-empty', text: q ? 'No chat matches' : 'No chats yet' })]));
+  }
+  let ovToken = 0;
+  async function paintSide() {
+    const t = ++ovToken;
+    try { const o = await api.agent.overview(); if (t === ovToken) overview = o; } catch {}
+    paintChats();
   }
   chatFilter.addEventListener('input', paintChats);
   chatFilter.addEventListener('keydown', e => { if (e.key === 'Escape') { chatFilter.value = ''; chatFilter.classList.add('hidden'); paintChats(); } });
-  on('chats', list => { chatRows = list.filter(c => c.title !== 'New chat' || c.active); paintChats(); });
-
-  function paintProjects() {
-    const cur = state.workspace?.root;
-    const all = [...(cur ? [cur] : []), ...(state.settings.recentFolders || []).filter(d => d !== cur)].slice(0, 6);
-    projList.replaceChildren(...(all.length ? all.map(d => h('button', { class: 'ag-item' + (d === cur ? ' on' : ''), title: d, onclick: () => d !== cur && emit('cmd', { open: d }) },
-      icon(d === cur ? 'folderOpen' : 'folder'), h('span', { class: 'grow', text: d.split(/[\\/]/).pop() })))
-      : [h('button', { class: 'ag-item', onclick: () => emit('cmd', 'open-folder') }, icon('folder'), h('span', { class: 'grow muted', text: 'Open a folder…' }))]));
-  }
+  on('chats', list => { chatRows = list; paintChats(); paintSide(); });
+  function paintProjects() { paintSide(); }
   function paintAi() {
     const s = state.settings;
     const auto = !s.model || s.model === 'auto';

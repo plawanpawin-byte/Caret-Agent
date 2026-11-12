@@ -23,7 +23,7 @@ You only pay the AI companies directly for what you already use (your Claude or 
 
 ## Download
 
-1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.1.0.exe` (Windows, about 92 MB).
+1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.1.1.exe` (Windows, about 92 MB).
 2. Run it and follow the installer.
 3. Windows may show a blue "Windows protected your PC" box because the installer is not code-signed yet. Click **More info**, then **Run anyway**.
 
@@ -38,7 +38,7 @@ npm start
 
 ## How to use it
 
-1. **Open a project.** On first launch pick a folder, or paste a repository address to clone. Choose the view you like: IDE or Agent. You can switch any time from the menu at the top left.
+1. **Start a chat or a project.** In the Agent view, **New task** opens a normal chat that belongs to no project. To work on code, click the folder-plus button next to **Projects** and choose a folder: that folder is the project. Press **+** on a project to start a new conversation in it; each project keeps its own chat history. You can also clone a repository, and switch between IDE and Agent from the menu at the top left.
 2. **Pick an AI.** Open the model menu in the prompt bar. If Claude Code or Codex is already signed in on your computer, it shows up ready to use. For Grok, Gemini or ChatGPT paste an API key; it is checked and stored encrypted.
 3. **Choose a mode and a permission.** Plan, Code or Agent decides what the AI does. Ask first, Decide for me or Full access decides how much it may do without asking.
 4. **Describe the task.** Type what you want, use `@` to mention a file, or paste a screenshot. Watch it read, edit and run commands.

@@ -64,6 +64,7 @@ export function createChat() {
   }
   const listChats = () => [...chats.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(c => ({ id: c.id, title: c.title, updatedAt: c.updatedAt, running: c.running, active: c.id === activeId }));
 
+  let initP = Promise.resolve();
   async function newChat() {
     const t = await api.agent.create();
     chats.set(t.id, { ...t, transcript: [], approvals: [], loaded: true });
@@ -551,7 +552,7 @@ export function createChat() {
     ], { x: e.clientX, y: e.clientY });
   });
 
-  on('workspace', async () => { chats.clear(); openIds = []; activeId = null; await init(); });
+  on('workspace', () => { initP = (async () => { chats.clear(); openIds = []; activeId = null; await init(); })(); });
   on('cmd', c => { if (c === 'focus-chat') textarea.focus(); if (c === 'new-chat') newChat(); });
 
   async function init() {
@@ -572,5 +573,7 @@ export function createChat() {
 
   init();
   getCatalog();
-  return { el, setVariant, newChat, select, deleteChat, listChats, focus: () => textarea.focus(), rename: async (id, t) => { await api.agent.rename(id, t); await refreshList(); renderTabs(); } };
+  // From the side bar: wait for a project switch to finish first, and reuse a chat that is still empty.
+  const newChatHere = async () => { await initP; const c = chats.get(activeId); if (c && !c.transcript.length && !c.running) { await select(activeId); textarea.focus(); return; } return newChat(); };
+  return { el, setVariant, newChat: newChatHere, select: async id => { await initP; return select(id); }, deleteChat, listChats, focus: () => textarea.focus(), rename: async (id, t) => { await api.agent.rename(id, t); await refreshList(); renderTabs(); } };
 }

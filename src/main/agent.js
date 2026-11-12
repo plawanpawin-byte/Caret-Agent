@@ -58,6 +58,19 @@ function persist() {
   }, 400);
 }
 
+// Chats of every project, for the side bar. The open project comes from memory, the others from their saved files.
+function overview(folders) {
+  const rows = list => list.map(t => ({ id: t.id, title: t.title, updatedAt: t.updatedAt, running: running.has(t.id) })).sort((a, b) => b.updatedAt - a.updatedAt);
+  const read = root => {
+    const key = crypto.createHash('sha1').update(root || '(no folder)').digest('hex').slice(0, 16);
+    try { return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'chats', key + '.json'), 'utf8')).tabs || []; } catch { return []; }
+  };
+  const cur = ws.getRoot() || null;
+  const of = root => rows(root === cur ? [...tabs.values()] : read(root));
+  const dirs = [...new Set([...(cur ? [cur] : []), ...(folders || [])])];
+  return { none: of(null), projects: dirs.map(dir => ({ dir, chats: of(dir) })) };
+}
+
 function summary(t) { return { id: t.id, title: t.title, updatedAt: t.updatedAt, running: running.has(t.id), model: t.lastModel || null }; }
 function listTabs() { return [...tabs.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(summary); }
 function getTab(id) { const t = tabs.get(id); return t ? { ...summary(t), transcript: t.transcript } : null; }
@@ -459,4 +472,4 @@ function failedRun(result) {
 
 function shutdown() { for (const id of running.keys()) stop(id); bridge?.then(b => b.server.close(), () => {}); }
 
-module.exports = { compactMessages, failedRun, init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };
+module.exports = { overview, compactMessages, failedRun, init, loadTabs, listTabs, getTab, newTab, renameTab, deleteTab, send, stop, answerApproval, shutdown };

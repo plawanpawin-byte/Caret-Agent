@@ -243,6 +243,7 @@ function registerIpc() {
   handle('models:hardware', () => models.hardware());
 
   handle('agent:list', () => agent.listTabs());
+  handle('agent:overview', () => agent.overview(settings.load().recentFolders));
   handle('agent:get', id => agent.getTab(id));
   handle('agent:new', () => agent.newTab());
   handle('agent:rename', (id, t) => agent.renameTab(id, t));

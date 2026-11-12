@@ -984,3 +984,13 @@ body.agent-layout .pp-list { display: block; }
 .pal-keys { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
 .pal-keys .kbd { font-size: 11px; padding: 0 5px; height: 18px; line-height: 17px; }
 .pal-head { padding: 6px 10px 2px; font-size: 11.5px; color: #7d7d7d; text-align: right; }
+
+/* agent side bar: chats nested under a project */
+.ag-proj { display: flex; flex-direction: column; gap: 1px; }
+.ag-proj-row { position: relative; display: flex; align-items: center; }
+.ag-proj-row .ag-item { flex: 1; min-width: 0; }
+.ag-add { position: absolute; right: 4px; top: 2px; opacity: 0; transition: opacity .12s; }
+.ag-proj-row:hover .ag-add, .ag-add:focus-visible { opacity: 1; }
+.ag-chat.nested { padding-left: 38px; }
+.ag-empty.nested { padding-left: 38px; }
+.ag-projects { overflow-y: auto; max-height: 55%; flex: none; }
