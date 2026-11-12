@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/studio.png" alt="Caret Agent in Studio view: file tree, editor, terminal and AI chat" width="900">
+  <img src="docs/ide.png" alt="Caret Agent in the IDE view: file tree, editor, terminal and AI chat" width="900">
 </p>
 
 ---
@@ -53,10 +53,10 @@ Every AI reads `.caret/DESIGN.md` before it builds a screen: a calm colour syste
 
 **Two views, your choice**
 
-| Studio | Agent |
+| IDE | Agent |
 |---|---|
 | A full code editor — the same engine as VS Code — with files, terminal and AI chat side by side. | A desktop agent. Your projects and chats on the left, the conversation in the middle; files, terminal and the editor are one click away. |
-| <img src="docs/studio.png" alt="Studio view"> | <img src="docs/agent.png" alt="Agent view"> |
+| <img src="docs/ide.png" alt="IDE view"> | <img src="docs/agent.png" alt="Agent view"> |
 
 ## Made for many people, not one
 

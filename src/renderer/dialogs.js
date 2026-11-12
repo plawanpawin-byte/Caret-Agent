@@ -56,7 +56,7 @@ export function onboarding() {
           h('p', { class: 'lead', text: 'Switch any time from the top bar.' }),
           h('div', { class: 'layout-cards' },
             h('button', { class: 'layout-card' + (data.layout === 'studio' ? ' on' : ''), onclick: () => { data.layout = 'studio'; render(); } }, miniStudio(),
-              h('div', { class: 't', text: 'Studio' }), h('div', { class: 'd', text: 'A full code editor like VS Code, with files, terminal and AI chat side by side.' })),
+              h('div', { class: 't', text: 'IDE' }), h('div', { class: 'd', text: 'A code editor with files, a terminal and the AI side by side.' })),
             h('button', { class: 'layout-card' + (data.layout === 'agent' ? ' on' : ''), onclick: () => { data.layout = 'agent'; render(); } }, miniAgent(),
               h('div', { class: 't', text: 'Agent' }), h('div', { class: 'd', text: 'Chat first. Describe what you want and watch the AI build it.' }))));
       } else {
@@ -113,7 +113,7 @@ export function openSettings(section) {
 
   const name = h('input', { class: 'field', value: s.name || '', maxlength: 60 });
   const role = h('select', { class: 'field' }, ...ROLES.map(([t]) => h('option', { value: t, selected: s.role === t }, t)));
-  const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'Studio (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (chat first)'));
+  const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'IDE (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (desktop agent)'));
 
   const body = h('div', { class: 'modal-body' },
     h('div', { class: 'section-title', text: 'You' }),
