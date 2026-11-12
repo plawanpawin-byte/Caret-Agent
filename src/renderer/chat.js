@@ -5,8 +5,8 @@ import { api, state, on, emit, saveSettings, getCatalog, refreshCatalog, modelLa
 import { mountMarkdown } from './markdown.js';
 
 const MODES = {
-  plan: { label: 'Plan', icon: 'plan', sub: 'Reads the project and writes a plan. Changes nothing.' },
-  code: { label: 'Code', icon: 'code', sub: 'Makes the change you ask for, then stops.' },
+  plan: { label: 'Plan', icon: 'plan', sub: 'Plans first and changes nothing, then asks to start coding.' },
+  code: { label: 'Code', icon: 'code', sub: 'Makes just the change you ask for, then stops.' },
   agent: { label: 'Agent', icon: 'agent', sub: 'Works on its own until the task is done and checked.' },
 };
 const PERMS = {
@@ -34,23 +34,20 @@ export function createChat() {
   const permBtn = h('button', { class: 'pill', title: 'Permissions' });
   const modelBtn = h('button', { class: 'pill model', title: 'Model' });
   const ctxBtn = h('button', { class: 'pill toggle', title: 'Let the AI search the whole project for context' }, icon('layers'), h('span', { text: 'Codebase' }));
-  const planBtn = h('button', { class: 'pill toggle', title: 'Plan only: read the project and write a plan, change nothing (Shift+Tab)' }, icon('plan'), h('span', { text: 'Plan' }));
+  const modeBtn = h('button', { class: 'pill mode', title: 'How the AI works (Shift+Tab switches Plan on and off)' });
   const sendBtn = h('button', { class: 'send', title: 'Send (Enter)' });
   const plusBtn = h('button', { class: 'ctx-plus', title: 'Add context' }, icon('plus'));
   const composer = h('div', { class: 'composer' }, attachEl, textarea,
-    h('div', { class: 'composer-row' }, modelBtn, ctxBtn, planBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
+    h('div', { class: 'composer-row' }, modelBtn, ctxBtn, modeBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
   const composerWrap = h('div', { class: 'composer-wrap' }, composer);
-  // panel header: two tabs (Chat = edits you ask for, Composer = works on its own) + actions on the right
-  const tabChat = h('button', { class: 'htab', title: 'Makes the changes you ask for', onclick: () => setTab('code') }, 'Chat');
-  const tabComposer = h('button', { class: 'htab', title: 'Works on its own until the task is done', onclick: () => setTab('agent') }, 'Composer');
-  const subHead = h('div', { class: 'chat-head' }, h('div', { class: 'hseg' }, tabChat, tabComposer), h('span', { class: 'grow' }),
+  // panel header: a title and the chat actions
+  const subHead = h('div', { class: 'chat-head' }, h('span', { class: 'chat-title', text: 'AI' }), h('span', { class: 'grow' }),
     h('button', { class: 'icon-btn', title: 'New chat (Ctrl+T)', onclick: () => newChat() }, icon('plus')),
     h('button', { class: 'icon-btn', title: 'Past chats', onclick: e => historyMenu(e.currentTarget) }, icon('history')),
     h('button', { class: 'icon-btn', title: 'Switch to the Agent', onclick: () => emit('cmd', { layout: 'agent' }) }, icon('expand')));
   const el = h('div', { class: 'chat' }, subHead, tabStrip, transcript, welcome, composerWrap);
   let useCodebase = false; try { useCodebase = localStorage.getItem('caret.codebase') === '1'; } catch {}
   let lastNonPlan = 'code';
-  function setTab(mode) { lastNonPlan = mode; saveSettings({ mode }).then(updateComposer); }
 
   // ---------- tabs ----------
   function loadOpen() { try { return JSON.parse(localStorage.getItem('caret.openChats') || '[]'); } catch { return []; } }
@@ -224,6 +221,25 @@ export function createChat() {
   }
   const prefix = (t, p) => String(t).split('\n').map(l => p + l).join('\n');
 
+  // After a Plan run: ask once whether to start coding (Full access skips the question).
+  function renderPlanCard(c) {
+    if (!c.planReady || c.running) return [];
+    return [h('div', { class: 'plancard' },
+      icon('plan'),
+      h('div', { class: 'pc-text' }, h('b', { text: 'Plan ready' }), h('span', { text: 'Start coding it now? The plan is saved in .caret/PLAN.md.' })),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn primary', onclick: () => startCoding(c) }, 'Start coding'),
+        h('button', { class: 'btn ghost', onclick: () => { c.planReady = false; renderAll(); } }, 'Not yet')))];
+  }
+  async function startCoding(c) {
+    c.planReady = false;
+    if (c.running) return;
+    await saveSettings({ mode: 'agent' });
+    c.running = true; updateComposer(); renderAll();
+    const s = state.settings;
+    await api.agent.send({ tabId: c.id, text: 'Looks good. Start coding the plan now and check that it works.', images: [], mode: 'agent', permission: s.permission, model: s.model || 'auto' });
+  }
+
   let renderQueued = false;
   function renderAll() {
     renderQueued = false;
@@ -258,8 +274,8 @@ export function createChat() {
       return;
     }
     const items = c.transcript.map((it, i) => renderItem(it, c, i === c.transcript.length - 1));
-    transcript.replaceChildren(...items, ...renderApprovals(c));
-    if (stick || c.approvals.length) transcript.scrollTop = transcript.scrollHeight;
+    transcript.replaceChildren(...items, ...renderApprovals(c), ...renderPlanCard(c));
+    if (stick || c.approvals.length || c.planReady) transcript.scrollTop = transcript.scrollHeight;
   }
   const queueRender = () => { if (!renderQueued) { renderQueued = true; setTimeout(renderAll, 60); } };
 
@@ -310,6 +326,8 @@ export function createChat() {
       case 'running':
         c.running = ev.running;
         if (!ev.running) c.approvals = [];
+        // Full access never asks: a finished plan goes straight on to coding.
+        if (!ev.running && c.planReady && state.settings.permission === 'full') { c.planReady = false; setTimeout(() => startCoding(c), 0); }
         renderTabs(); emit('chats', listChats()); updateComposer();
         break;
       case 'user': {
@@ -328,6 +346,7 @@ export function createChat() {
       case 'approval': c.approvals.push(ev); if (ev.tab !== activeId) toast(`"${c.title}" needs your OK`); emit('attention', ev.tab); break;
       case 'approval-closed': c.approvals = c.approvals.filter(a => a.reqId !== ev.reqId); break;
       case 'done': if (ev.files?.length) emit('fs-changed', {}); break;
+      case 'plan-ready': c.planReady = true; break;
     }
     if (ev.tab === activeId) queueRender();
   });
@@ -338,9 +357,9 @@ export function createChat() {
     const p = PERMS[s.permission] || PERMS.ask;
     const mode = s.mode || 'code';
     if (mode !== 'plan') lastNonPlan = mode;
-    tabChat.classList.toggle('on', mode !== 'agent');
-    tabComposer.classList.toggle('on', mode === 'agent');
-    planBtn.classList.toggle('on', mode === 'plan');
+    const md = MODES[mode] || MODES.code;
+    modeBtn.className = 'pill mode mode-' + mode;
+    modeBtn.replaceChildren(icon(md.icon), h('span', { text: md.label }), icon('down', 'caret-down'));
     ctxBtn.classList.toggle('on', useCodebase);
     permBtn.className = 'pill perm-' + (s.permission || 'ask');
     permBtn.title = `Permissions: ${p.label}. ${p.sub || ''}`.trim();
@@ -355,7 +374,7 @@ export function createChat() {
     sendBtn.disabled = !busy && !textarea.value.trim() && !attachments.length;
   }
 
-  planBtn.onclick = () => setTabMode(state.settings.mode === 'plan' ? lastNonPlan : 'plan');
+  modeBtn.onclick = () => menu(modeBtn, ['agent', 'plan', 'code'].map(k => ({ label: MODES[k].label, sub: MODES[k].sub, icon: MODES[k].icon, checked: (state.settings.mode || 'code') === k, onClick: () => setTabMode(k) })), { above: true });
   ctxBtn.onclick = () => { useCodebase = !useCodebase; try { localStorage.setItem('caret.codebase', useCodebase ? '1' : '0'); } catch {} updateComposer(); };
   function setTabMode(m) { saveSettings({ mode: m }).then(updateComposer); }
   permBtn.onclick = () => menu(permBtn, Object.entries(PERMS).map(([k, v]) => ({ label: v.label, sub: v.sub, icon: v.icon, checked: state.settings.permission === k, onClick: async () => { await saveSettings({ permission: k }); updateComposer(); } })), { above: true });
@@ -394,7 +413,7 @@ export function createChat() {
       setTabMode(state.settings.mode === 'plan' ? lastNonPlan : 'plan');
     }
   });
-  sendBtn.onclick = () => { const c = chats.get(activeId); if (c?.running) api.agent.stop(activeId); else submit(); };
+  sendBtn.onclick = () => { const c = chats.get(activeId); if (c?.running) { c.planReady = false; api.agent.stop(activeId); } else submit(); };
 
   let mentionTimer;
   function fileMention(q) {
@@ -473,6 +492,7 @@ export function createChat() {
     const images = attachments.filter(a => a.kind === 'image');
     let full = files.length ? `${text}\n\n(Files I mean: ${files.join(', ')})` : text;
     if (useCodebase) full += '\n\n(Use the whole codebase as context: search and read the relevant files before answering.)';
+    c.planReady = false;
     c._pendingThumbs = images.map(i => i.dataUrl);
     textarea.value = ''; attachments = []; drafts.delete(activeId); renderAttachments(); autosize();
     c.running = true; updateComposer();

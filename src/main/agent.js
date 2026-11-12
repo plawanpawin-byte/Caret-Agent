@@ -17,6 +17,7 @@ const permissions = require('./permissions');
 const terminals = require('./terminal');
 const llm = require('./llm');
 const runners = require('./runners');
+const { createBreaker, lockMessage } = require('./breaker');
 
 let emit = () => {};
 let openPreview = () => {};
@@ -220,6 +221,7 @@ async function send({ tabId, text, images, mode, permission, model }) {
   run.onFileChanged = f => onFileChanged(f);
 
   let label = '';
+  let failed = false;
   try {
     const pick = await resolveModel(model, mode, attachments.length > 0);
     label = `${pick.provider}:${pick.model}`;
@@ -255,6 +257,7 @@ async function send({ tabId, text, images, mode, permission, model }) {
     }
     tab.lastProvider = pick.provider;
   } catch (e) {
+    failed = true;
     if (!run.stopped) {
       const msg = friendlyError(e, label);
       reply.parts.push({ type: 'error', text: msg });
@@ -270,7 +273,15 @@ async function send({ tabId, text, images, mode, permission, model }) {
     running.delete(tabId);
     persist();
     if (label && ws.getRoot()) memory.appendLog({ model: label, mode, prompt: text, files: run.files, commands: run.commands }).catch(() => {});
+    // A finished plan is kept in .caret/PLAN.md (so the coding step, and any other AI, can follow it)
+    // and the app is told it can offer to start coding.
+    let planReady = false;
+    if (mode === 'plan' && !failed && !run.stopped && ws.getRoot() && answer.length > 40) {
+      if (!run.files.includes('.caret/PLAN.md')) await memory.writePlan(answer).then(() => { run.files.push('.caret/PLAN.md'); onFileChanged('.caret/PLAN.md'); }).catch(() => {});
+      planReady = true;
+    }
     emit({ tab: tabId, type: 'done', files: [...new Set(run.files)] });
+    if (planReady) emit({ tab: tabId, type: 'plan-ready' });
     emit({ tab: tabId, type: 'running', running: false });
   }
 }
@@ -341,6 +352,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
   let saidSomething = false; // has the model written any text during this run?
   let nudged = false;        // we ask a silent model to carry on at most once
   const repeats = new Map(); // how often the same call (with the same files changed so far) was made
+  const breaker = createBreaker(); // stops an AI that keeps running commands that fail
   let badCalls = 0;         // times a model wrote a tool call that could not be parsed
   for (let step = 0; step < MAX_STEPS[run.mode]; step++) {
     if (run.stopped) return;
@@ -403,6 +415,12 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         const tooMany = isWrite && !again && (repeats.get('n:' + args.path) || 0) >= 5; // a model that keeps rewriting one file is going round in circles
         // The same command that already failed, unchanged: refuse it so the model has to look at the error instead of looping.
         const cmdKey = name === 'run_command' ? 'f:' + String(args.command || '').trim() + '|' + run.files.length : null;
+        if (name === 'run_command' && run.cmdLock) {   // too many failures in a row: no more commands, explain instead
+          result = run.cmdLock;
+          on.tool({ id: call.id, status: 'denied', result });
+          messages.push({ role: 'tool', tool_call_id: call.id, name, content: result });
+          continue;
+        }
         if (cmdKey && repeats.has(cmdKey)) {
           result = `This exact command already failed and nothing has changed since. Do not run it again. Read its error output above, find the cause and fix it (or try a different approach), then explain to the user what went wrong.`;
           on.tool({ id: call.id, status: 'denied', result });
@@ -423,7 +441,7 @@ async function toolLoop({ run, tab, pick, ctx, overview, text, attachments, on }
         if (run.stopped) return;
         if (!g.ok) { result = `Not allowed: ${g.message}`; on.tool({ id: call.id, status: 'denied', result: g.message }); }
         else {
-          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); if (cmdKey && failedRun(result)) repeats.set(cmdKey, 1); if (isWrite) { repeats.set('w:' + args.path, sig); repeats.set('n:' + args.path, (repeats.get('n:' + args.path) || 0) + 1); } }
+          try { result = await tools.execute(name, args, run); on.tool({ id: call.id, status: 'done', result }); if (cmdKey && failedRun(result)) repeats.set(cmdKey, 1); if (name === 'run_command') { const trip = breaker.record(args.command, failedRun(result), run.files.length); if (trip) run.cmdLock = lockMessage(trip); } if (isWrite) { repeats.set('w:' + args.path, sig); repeats.set('n:' + args.path, (repeats.get('n:' + args.path) || 0) + 1); } }
           catch (e) { result = `Error: ${e.message}`; on.tool({ id: call.id, status: 'error', result: e.message }); }
         }
       }

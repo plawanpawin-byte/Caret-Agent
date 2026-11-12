@@ -809,7 +809,7 @@ body.agent-layout .pp-list { display: block; }
 .term-tab.on { background: var(--surface-2); }
 .term-body { padding: 2px 16px 10px; }
 
-/* AI panel: Chat / Composer as one small segmented switch */
+/* AI panel header */
 #studio .chat-head { height: 44px; padding: 0 8px 0 10px; background: var(--bg); border-bottom: 1px solid var(--border); }
 .hseg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); }
 .hseg .htab { height: 26px; padding: 0 12px; border-radius: 6px; text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; color: var(--muted); }
@@ -867,3 +867,14 @@ body.agent-layout .pp-list { display: block; }
 /* prompt bar: model, Codebase and Plan sit together on the left; permissions and send on the right */
 .composer-row { gap: 2px; }
 .composer-row .pill.toggle { padding: 0 8px; }
+
+/* mode dropdown (Agent / Plan / Code) and the "Plan ready" card */
+.chat-title { font-size: 12.5px; font-weight: 600; color: var(--text-hi); padding-left: 6px; }
+.pill.mode { color: var(--text-hi); font-weight: 500; }
+.pill.mode.mode-plan { color: #8fb4ff; }
+.plancard { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; margin: 8px 0 14px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); }
+.plancard > svg.i { width: 18px; height: 18px; margin-top: 1px; color: #8fb4ff; }
+.plancard .pc-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.plancard .pc-text b { color: var(--text-hi); font-weight: 600; }
+.plancard .pc-text span { color: var(--muted); font-size: 12px; }
+.plancard .actions { grid-column: 2; display: flex; gap: 6px; margin-top: 8px; }

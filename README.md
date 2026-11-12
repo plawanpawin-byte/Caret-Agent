@@ -35,9 +35,9 @@ AI providers lists every AI Caret Agent can use and what is ready. Open one to s
 - **Full access** — nothing asks. The AI is still locked inside your project folder.
 
 **Three ways to work**
-- **Plan** — reads your code and writes a plan to `.caret/PLAN.md`. Changes nothing.
+- **Plan** — reads your code and writes a plan to `.caret/PLAN.md`, changing nothing. When the plan is ready it asks whether to start coding it; with Full access it just carries on.
 - **Code** — makes the change you asked for, then stops.
-- **Agent** — works on its own: writes, runs, checks, fixes, and only stops when it works.
+- **Agent** — works on its own: writes, runs, checks, fixes, and only stops when it works. If a command keeps failing, it is stopped instead of looping forever.
 
 **Built-in terminal the AI can use**
 The AI runs commands in the same terminal you see, marked so you know which ones were its. It can start a dev server, and any `localhost` address it prints becomes a button that opens a live preview.

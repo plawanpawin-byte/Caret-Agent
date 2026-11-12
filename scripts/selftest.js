@@ -206,6 +206,29 @@ async function t(name, fn) {
     assert.match(await tools.execute('edit_file', { path: 'a.js', old_text: 'return 1;', new_text: 'return 2;' }, run), /Edited/);
   });
 
+  await t('breaker stops an AI that keeps re-running failing commands, but not one that is fixing things', async () => {
+    const { createBreaker, stopMessage, lockMessage } = require('../src/main/breaker');
+    // the same command, again and again
+    let b = createBreaker();
+    assert.strictEqual(b.record('npm start', true, 0), null);
+    assert.strictEqual(b.record('NPM   start', true, 0), null, 'spacing and case do not make it a new command');
+    assert.deepStrictEqual(b.record('npm start', true, 0), { reason: 'same', count: 3 });
+    // small variations still add up
+    b = createBreaker();
+    for (const c of ['node a.js', 'node ./a.js', 'node a.js --x']) assert.strictEqual(b.record(c, true, 0), null);
+    assert.deepStrictEqual(b.record('node a.js --y', true, 0), { reason: 'streak', count: 4 });
+    // a success, or a file that changed in between, starts the count again
+    b = createBreaker();
+    for (const c of ['a', 'b', 'c']) b.record(c, true, 0);
+    assert.strictEqual(b.record('d', false, 0), null);
+    for (const c of ['e', 'f', 'g']) assert.strictEqual(b.record(c, true, 0), null);
+    b = createBreaker();
+    for (const c of ['a', 'b', 'c']) b.record(c, true, 0);
+    assert.strictEqual(b.record('d', true, 1), null, 'the AI edited a file, so this is a fresh attempt');
+    assert.match(stopMessage({ reason: 'same', count: 3 }), /same command failed 3 times/);
+    assert.match(lockMessage({ reason: 'streak', count: 4 }), /Do not run any more commands/);
+  });
+
   await t('write_file refuses once when it would drop most of a file; failed commands are recognised', async () => {
     const tools = require('../src/main/tools');
     const { failedRun } = require('../src/main/agent');
