@@ -92,11 +92,21 @@ async function boot() {
     ],
   };
   const menubar = h('div', { class: 'menubar' }, ...Object.entries(menus).map(([name, items]) => {
-    const b = h('button', { text: name, onclick: () => { remember(document.activeElement); menu(b, items()); b.classList.add('open'); } });
+    const b = h('button', { text: name, onclick: () => { remember(document.activeElement); menu(b, items()); menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); b.classList.add('open'); } });
     b.addEventListener('mouseenter', () => { if (document.querySelector('.menu') && menubar.querySelector('.open')) { menu(b, items()); menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); b.classList.add('open'); } });
     return b;
   }));
   document.addEventListener('mousedown', e => { if (!e.target.closest('.menubar')) menubar.querySelectorAll('.open').forEach(x => x.classList.remove('open')); }, true);
+  // With a menu open, Left / Right move to the next menu, like any desktop app.
+  document.addEventListener('keydown', e => {
+    const cur = menubar.querySelector('.open');
+    if (cur && e.key === 'Escape') { cur.classList.remove('open'); return; }
+    if (!cur || !document.querySelector('.menu') || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    const all = [...menubar.children], i = all.indexOf(cur);
+    const next = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+    e.preventDefault(); e.stopPropagation();
+    next.click();
+  }, true);
   $('titlebar').append(
     h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
     viewBtn, menubar,
