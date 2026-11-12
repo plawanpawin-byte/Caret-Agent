@@ -858,3 +858,6 @@ body.agent-layout .pp-list { display: block; }
 @font-face { font-family: "Caret Thai"; src: local("Leelawadee UI"), local("Noto Sans Thai"), local("Tahoma"); unicode-range: U+0E00-0E7F; size-adjust: 114%; }
 @font-face { font-family: "Caret Thai"; font-weight: 700; src: local("Leelawadee UI Bold"), local("Noto Sans Thai Bold"), local("Tahoma Bold"); unicode-range: U+0E00-0E7F; size-adjust: 114%; }
 :root { --font: "Caret Thai", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans Thai", "Leelawadee UI", Roboto, sans-serif; }
+
+/* hint text was 3.6:1 on the background; 4.8:1 reads clearly and still sits below the muted grey */
+:root { --faint: #858585; }
