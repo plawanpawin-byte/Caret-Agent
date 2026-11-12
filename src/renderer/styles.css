@@ -950,3 +950,17 @@ body.agent-layout .pp-list { display: block; }
 .key-status:empty { min-height: 0; margin: 0; }
 .key-status { margin-top: 8px; }
 .pp-card .pc-foot { margin-top: 14px; }
+
+/* v10 prompt bar: words only where they help. Mode and model keep their names; the rest are plain icons with tooltips. */
+.composer-row { gap: 2px; padding: 4px 8px 8px 8px; }
+.composer-row .pill.ico { width: 28px; padding: 0; justify-content: center; color: #8d8d8d; }
+.composer-row .pill.ico svg { width: 16px; height: 16px; }
+.composer-row .pill.ico:hover { color: #fff; }
+.composer-row .pill.ico.toggle.on { color: var(--accent); background: rgba(240, 166, 58, .14); border-color: transparent; }
+.composer-row .pill.ico.perm-auto { color: #7fc68f; }
+.composer-row .pill.ico.perm-full { color: var(--danger); }
+.composer-row .pill.model { color: #a8a8a8; font-weight: 400; }
+.composer-row .pill.model:hover { color: #fff; }
+.composer-row .pill.model svg:first-child { display: none; }
+.composer-row .pill.mode { padding: 0 8px 0 6px; }
+.composer-row .send { margin-left: 6px; }

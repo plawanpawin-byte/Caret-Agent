@@ -31,14 +31,15 @@ export function createChat() {
   const textarea = h('textarea', { rows: 1, placeholder: 'Ask anything (Ctrl+L), @ to mention' });
   const attachEl = h('div', { class: 'attachments' });
   const fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hidden' });
-  const permBtn = h('button', { class: 'pill', title: 'Permissions' });
+  const permBtn = h('button', { class: 'pill ico', title: 'Permissions' });
   const modelBtn = h('button', { class: 'pill model', title: 'Model' });
-  const ctxBtn = h('button', { class: 'pill toggle', title: 'Let the AI search the whole project for context' }, icon('layers'), h('span', { text: 'Codebase' }));
+  const ctxBtn = h('button', { class: 'pill ico toggle', title: 'Search the whole project for context' }, icon('layers'));
+  const attachBtn = h('button', { class: 'pill ico', title: 'Attach an image (you can also paste or drop one)', onclick: () => fileInput.click() }, icon('paperclip'));
   const modeBtn = h('button', { class: 'pill mode', title: 'How the AI works (Shift+Tab switches Plan on and off)' });
   const sendBtn = h('button', { class: 'send', title: 'Send (Enter)' });
   const plusBtn = h('button', { class: 'ctx-plus', title: 'Add context' }, icon('plus'));
   const composer = h('div', { class: 'composer' }, attachEl, textarea,
-    h('div', { class: 'composer-row' }, modelBtn, ctxBtn, modeBtn, h('span', { class: 'grow' }), permBtn, sendBtn), fileInput);
+    h('div', { class: 'composer-row' }, modeBtn, modelBtn, h('span', { class: 'grow' }), ctxBtn, attachBtn, permBtn, sendBtn), fileInput);
   const composerWrap = h('div', { class: 'composer-wrap' }, composer);
   // panel header: a title and the chat actions
   const subHead = h('div', { class: 'chat-head' }, h('span', { class: 'chat-title', text: 'AI' }), h('span', { class: 'grow' }),
@@ -367,9 +368,10 @@ export function createChat() {
     modeBtn.className = 'pill mode mode-' + mode;
     modeBtn.replaceChildren(icon(md.icon), h('span', { text: md.label }), icon('down', 'caret-down'));
     ctxBtn.classList.toggle('on', useCodebase);
-    permBtn.className = 'pill perm-' + (s.permission || 'ask');
+    permBtn.className = 'pill ico perm-' + (s.permission || 'ask');
     permBtn.title = `Permissions: ${p.label}. ${p.sub || ''}`.trim();
-    permBtn.replaceChildren(icon(p.icon), h('span', { text: p.label }), icon('down', 'caret-down'));
+    permBtn.replaceChildren(icon(p.icon));
+    ctxBtn.title = useCodebase ? 'Searching the whole project (click to turn off)' : 'Search the whole project for context';
     modelBtn.replaceChildren(icon(s.model === 'auto' || !s.model ? 'sparkle' : 'cloud'),
       h('span', { text: s.model && s.model !== 'auto' ? modelLabel(s.model) : 'Auto' }), icon('down', 'caret-down'));
     const c = chats.get(activeId);
