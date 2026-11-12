@@ -509,7 +509,7 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .composer { container-type: inline-size; }
 .composer-row { flex-wrap: nowrap; min-width: 0; }
 .composer-row .pill { flex: none; }
-.composer-row .pill.model { flex: 0 1 auto; min-width: 0; min-width: 104px; max-width: 58%; }
+.composer-row .pill.model { flex: 0 1 auto; min-width: 0; max-width: 58%; }
 .composer-row .pill.model span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .composer-row .grow { flex: 1 1 0; min-width: 4px; }
 @container (max-width: 350px) {
@@ -863,3 +863,7 @@ body.agent-layout .pp-list { display: block; }
 :root { --faint: #858585; }
 
 @media (max-width: 1000px) { #sidebar { width: 190px !important; } #chatpane { width: 310px !important; } }
+
+/* prompt bar: model, Codebase and Plan sit together on the left; permissions and send on the right */
+.composer-row { gap: 2px; }
+.composer-row .pill.toggle { padding: 0 8px; }
