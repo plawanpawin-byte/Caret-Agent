@@ -37,7 +37,10 @@ export function createProviders() {
     const t = page.querySelector('.pp-log');
     if (t && id === current) t.textContent = line;
   });
-  page.addEventListener('keydown', e => { if (e.key === 'Escape' && !page.classList.contains('hidden')) close(); });
+  // Esc closes the page from anywhere, unless a menu or dialog is open on top of it (those take the Esc first).
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !e.defaultPrevented && !page.classList.contains('hidden') && !document.querySelector('.menu, .overlay')) close();
+  });
 
   async function load() {
     try { items = await api.providers.status(); } catch (e) { items = []; toast(clean(e), { error: true }); }
