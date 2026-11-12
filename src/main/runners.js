@@ -101,9 +101,15 @@ function runClaude({ tabId, model, mode, permission, prompt, system, sessionId, 
       }
     } else if (ev.type === 'result') {
       if (ev.is_error) result.error = ev.result || ev.subtype || 'Claude stopped with an error';
+      finished = true;
+      // The answer is complete. A server the AI left running can keep the process (and its output pipe)
+      // open forever, so after a short grace period end the run instead of waiting for it to exit.
+      setTimeout(() => { killTree(proc); doneNow(); }, 1500);
     }
   });
+  let finished = false, doneNow = () => {};
   const done = new Promise(resolve => {
+    doneNow = () => resolve(result);
     proc.on('error', e => { result.error = e.message; resolve(result); });
     proc.on('close', code => {
       if (code && !result.error) result.error = (stderr.trim().split('\n').slice(-3).join('\n')) || `Claude exited with code ${code}`;
@@ -151,6 +157,8 @@ function runCodex({ model, mode, permission, prompt, system, images, on }) {
         for (const c of item.changes || []) { result.files.push(c.path); on.fileChanged(c.path); }
         on.tool({ id: item.id, name: 'edit_file', args: { path: (item.changes || []).map(c => c.path).join(', ') }, status: 'done', result: (item.changes || []).map(c => `${c.kind} ${c.path}`).join('\n') });
       } else if (item.type === 'error' && item.message) result.error = item.message;
+    } else if (ev.type === 'turn.completed') {
+      setTimeout(() => { killTree(proc); doneNow(); }, 1500);
     } else if (ev.type === 'error' || ev.type === 'turn.failed') {
       result.error = ev.message || ev.error?.message || 'Codex failed';
     } else if (ev.msg) { // older Codex event format
@@ -159,7 +167,9 @@ function runCodex({ model, mode, permission, prompt, system, images, on }) {
       if (m.type === 'error') result.error = m.message;
     }
   });
+  let doneNow = () => {};
   const done = new Promise(resolve => {
+    doneNow = () => resolve(result);
     proc.on('error', e => { result.error = e.message; resolve(result); });
     proc.on('close', code => {
       if (code && !result.error) result.error = stderr.trim().split('\n').slice(-3).join('\n') || `Codex exited with code ${code}`;

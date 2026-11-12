@@ -486,7 +486,8 @@ svg.i { stroke-width: 1.6; shape-rendering: geometricPrecision; }
 .send svg { width: 16px; height: 16px; stroke-width: 2.2; }
 .send:hover { background: #e6e6e6; }
 .send:disabled { background: #2c2c2c; color: #6a6a6a; cursor: default; }
-.send.stop { background: var(--accent); color: #1a1408; }
+.send.stop { background: #fff; color: #111; border-radius: 50%; }
+.send.stop:hover { background: #e6e6e6; }
 .send.stop svg { fill: currentColor; stroke: none; width: 11px; height: 11px; }
 .chat > .transcript { order: 0; }
 

@@ -15,6 +15,47 @@
 
 ---
 
+## Free, forever
+
+Caret Agent costs nothing. No subscription, no account, no trial, no ads. It is MIT-licensed, so you can read, change and share every line.
+
+You only pay the AI companies directly for what you already use (your Claude or ChatGPT plan, or an API key). Caret Agent never sits in the middle and never takes a cut. Your code stays on your computer.
+
+## Download
+
+1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.1.0.exe` (Windows, about 92 MB).
+2. Run it and follow the installer.
+3. Windows may show a blue "Windows protected your PC" box because the installer is not code-signed yet. Click **More info**, then **Run anyway**.
+
+Prefer to run from source? You need Node.js installed:
+
+```bash
+git clone https://github.com/plawanpawin-byte/Caret-Agent.git
+cd Caret-Agent
+npm install
+npm start
+```
+
+## How to use it
+
+1. **Open a project.** On first launch pick a folder, or paste a repository address to clone. Choose the view you like: IDE or Agent. You can switch any time from the menu at the top left.
+2. **Pick an AI.** Open the model menu in the prompt bar. If Claude Code or Codex is already signed in on your computer, it shows up ready to use. For Grok, Gemini or ChatGPT paste an API key; it is checked and stored encrypted.
+3. **Choose a mode and a permission.** Plan, Code or Agent decides what the AI does. Ask first, Decide for me or Full access decides how much it may do without asking.
+4. **Describe the task.** Type what you want, use `@` to mention a file, or paste a screenshot. Watch it read, edit and run commands.
+5. **Switch AI when you need to.** Hit a limit? Pick another model in the same chat. It reads `.caret/HANDOFF.md` and carries on. Nothing to re-explain.
+6. **Stop any time.** The white stop button in the prompt bar ends the run. When the AI finishes, the chat stops showing "Working…" by itself.
+
+## Why use it
+
+- **Never re-explain your project.** One shared memory file works across every AI.
+- **Never blocked by a limit.** Move to the next model in one click and keep going.
+- **You stay in control.** Every edit can wait for your OK, with a preview of the change. Deletes go to the recycle bin.
+- **Safe by default.** The AI is locked inside your project folder. Your keys are encrypted and never reach the page.
+- **Better-looking results.** Built-in design rules keep generated pages from looking machine-made.
+- **One place for everything.** Editor, terminal, live preview and AI chat in a single window.
+
+---
+
 ## The problem
 
 You start a feature with Claude. The limit runs out. You move to Codex or Grok, and spend the next ten minutes explaining the whole project again.

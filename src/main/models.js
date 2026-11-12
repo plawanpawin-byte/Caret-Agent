@@ -121,7 +121,7 @@ const CLOUD_APIS = {
     headers: key => ({ authorization: `Bearer ${key}`, 'x-api-key': key, 'anthropic-version': '2023-06-01' }) },
   openai: { name: 'OpenAI API', family: 'codex', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
   xai: { name: 'Grok', family: 'xai', base: 'https://api.x.ai/v1', filter: id => /grok/i.test(id) && !/image|imagine|vision-beta/i.test(id) },
-  gemini: { name: 'Antigravity (Gemini)', family: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /gemini/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
+  gemini: { name: 'Antigravity (Gemini)', family: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /^gemini-(3\.7|3\.8|4[-.]?argon|4[-.]?carbon)/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
 };
 const apiHeaders = (provider, key) => (CLOUD_APIS[provider].headers ? CLOUD_APIS[provider].headers(key) : { authorization: `Bearer ${key}` });
 
