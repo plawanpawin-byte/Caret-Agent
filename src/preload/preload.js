@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('caret', {
   },
   fs: {
     list: call('fs:list'), read: call('fs:read'), readImage: call('fs:readImage'), write: call('fs:write'), create: call('fs:create'),
-    rename: call('fs:rename'), remove: call('fs:delete'), search: call('fs:search'), reveal: call('fs:reveal'),
+    rename: call('fs:rename'), remove: call('fs:delete'), search: call('fs:search'), files: call('fs:files'), reveal: call('fs:reveal'),
     onChanged: listen('fs:changed'),
   },
   term: {

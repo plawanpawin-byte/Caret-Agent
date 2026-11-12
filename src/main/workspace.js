@@ -126,6 +126,24 @@ async function deleteEntry(p) {
   await shell.trashItem(abs); // recycle bin, never a hard delete
 }
 
+// Every file path in the folder (for "Go to File"). Skips heavy folders.
+async function listFiles(max = 8000) {
+  const out = [];
+  async function walk(dir) {
+    if (out.length >= max) return;
+    let entries;
+    try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (out.length >= max) return;
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== '.git' && !IGNORED.has(e.name) && !e.isSymbolicLink()) await walk(abs); continue; }
+      if (e.isFile()) out.push(rel(abs));
+    }
+  }
+  if (root) await walk(root);
+  return out;
+}
+
 // Plain-text search across the folder (skips heavy and binary folders).
 async function search(query, { max = 200 } = {}) {
   if (!query || typeof query !== 'string') return [];
@@ -195,4 +213,4 @@ function cloneRepo(url, parentDir) {
   });
 }
 
-module.exports = { setRoot, getRoot, closeRoot, resolveSafe, listDir, readFile, readImage, writeFile, writeBinary, createEntry, renameEntry, deleteEntry, search, overview, cloneRepo, rel };
+module.exports = { setRoot, getRoot, closeRoot, resolveSafe, listDir, readFile, readImage, writeFile, writeBinary, createEntry, renameEntry, deleteEntry, search, listFiles, overview, cloneRepo, rel };

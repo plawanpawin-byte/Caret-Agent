@@ -5,6 +5,7 @@ import { createEditorArea } from './editor.js';
 import { createTerminalPanel } from './terminal.js';
 import { createChat } from './chat.js';
 import { onboarding, openSettings, cloneDialog } from './dialogs.js';
+import { createPalette } from './palette.js';
 import { createProviders } from './providers.js';
 
 const $ = id => document.getElementById(id);
@@ -24,7 +25,7 @@ async function boot() {
   let side = 'explorer';
 
   // ---------- title bar ----------
-  const omni = h('button', { class: 'omnibox', title: 'Folder', onclick: () => folderMenu(omni) }, icon('folder'), h('span', { text: 'No folder' }), icon('down'));
+  const omni = h('button', { class: 'omnibox', title: 'Search files and run commands (Ctrl+P)', onclick: () => palette.open('') }, icon('search'), h('span', { text: 'No folder' }));
   // Left of the title bar: the view you are in (a menu), then File / Edit / View / Help.
   const viewName = h('span', { text: 'IDE' });
   const viewBtn = h('button', { class: 'viewbtn', title: 'Switch view', onclick: () => viewMenu() }, viewName, icon('down'));
@@ -107,6 +108,7 @@ async function boot() {
     e.preventDefault(); e.stopPropagation();
     next.click();
   }, true);
+  const palette = createPalette({ setLayout: l => setLayout(l), openSettings: () => openSettings(), checkUpdate: () => checkUpdate() });
   $('titlebar').append(
     h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
     viewBtn, menubar,
@@ -309,7 +311,7 @@ async function boot() {
   function paintWorkspace() {
     const name = state.workspace?.name || 'No folder';
     omni.querySelector('span').textContent = name;
-    omni.title = state.workspace?.root || '';
+    omni.title = (state.workspace?.root ? state.workspace.root + ' · ' : '') + 'Search files and run commands (Ctrl+P)';
     sbFolder.querySelector('span').textContent = name;
     paintProjects();
     document.title = state.workspace ? `${name} — Caret Agent` : 'Caret Agent';
@@ -347,6 +349,7 @@ async function boot() {
       else if (c === 'providers') providersPanel.openList();
       else if (c?.providers) providersPanel.openList(c.providers, c.method);
       else if (c === 'search') { goSide('search'); }
+      else if (c === 'explorer') { goSide('explorer'); }
     } catch (e) { toast(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), { error: true }); }
   });
 

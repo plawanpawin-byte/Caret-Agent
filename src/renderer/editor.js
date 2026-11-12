@@ -170,6 +170,12 @@ export function createEditorArea() {
 
   on('editor-action', id => { if (!editor || !id) return; editor.focus(); editor.trigger('menu', id, null); });
   on('open-file', open);
+  on('editor-cmd', async c => {
+    if (c === 'save' && active) await save(active);
+    else if (c === 'save-all') { for (const t of tabs.filter(x => x.dirty)) await save(t); }
+    else if (c === 'close' && active) close(active);
+    else if (c === 'close-all') { if (!tabs.some(t => t.dirty) || confirm('Some files have unsaved changes. Close them all anyway?')) closeAll(); }
+  });
   on('workspace', () => { closeAll(); });
   on('fs-changed', () => syncFromDisk());
   on('file-renamed', ({ from }) => { const t = tabs.find(x => x.path === from); if (t) { t.dirty = false; close(t); } });

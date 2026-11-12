@@ -226,6 +226,7 @@ function registerIpc() {
   handle('fs:rename', (a, b) => ws.renameEntry(a, b));
   handle('fs:delete', p => ws.deleteEntry(p));
   handle('fs:search', q => ws.search(q));
+  handle('fs:files', () => ws.listFiles());
   handle('fs:reveal', p => shell.showItemInFolder(ws.resolveSafe(p)));
 
   handle('term:create', () => terminals.create({ cwd: ws.getRoot() || require('os').homedir(), title: process.platform === 'win32' ? 'PowerShell' : path.basename(process.env.SHELL || 'bash') }));
