@@ -112,12 +112,14 @@ async function boot() {
   $('titlebar').append(
     h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
     viewBtn, menubar,
-    omni, h('div', { class: 'spacer' }),
+    h('div', { class: 'spacer' }),
     h('div', { class: 'tools' },
       h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
       h('button', { class: 'icon-btn', title: 'Toggle terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('panel')),
       h('button', { class: 'icon-btn', title: 'Toggle AI chat (Ctrl+Alt+B)', onclick: () => emit('cmd', 'toggle-chat') }, icon('sidebarRight')),
-      h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))));
+      h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))),
+    // Last, so its no-drag area wins over the draggable spacer it sits on top of (otherwise the OS swallows the click).
+    omni);
 
   function folderMenu(anchor) {
     const recent = (state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 8);
