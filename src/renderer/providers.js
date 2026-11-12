@@ -166,10 +166,10 @@ export function createProviders() {
         h('div', { class: 'pc-foot' }, h('button', { class: 'btn', onclick: () => useIt(p, 'api') }, 'Use ' + ABOUT[p.id].api.title)),
         secure);
     }
-    const input = h('input', { class: 'key-input', type: key.shown ? 'text' : 'password', placeholder: a.keyHint || 'Paste your API key', spellcheck: 'false', autocomplete: 'off', value: key.value });
+    const input = h('input', { class: 'key-input', 'aria-label': p.by + ' API key', type: key.shown ? 'text' : 'password', placeholder: a.keyHint || 'Paste your API key', spellcheck: 'false', autocomplete: 'off', value: key.value });
     input.addEventListener('input', () => { key.value = input.value; if (key.state === 'error') { key.state = 'idle'; key.message = ''; status.replaceChildren(); } save.disabled = !key.value.trim(); });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(p); });
-    const eye = h('button', { class: 'icon-btn', title: key.shown ? 'Hide' : 'Show', onclick: () => { key.shown = !key.shown; input.type = key.shown ? 'text' : 'password'; eye.replaceChildren(icon(key.shown ? 'eyeOff' : 'eye')); input.focus(); } }, icon(key.shown ? 'eyeOff' : 'eye'));
+    const eye = h('button', { class: 'icon-btn', 'aria-label': 'Show or hide the key', title: key.shown ? 'Hide' : 'Show', onclick: () => { key.shown = !key.shown; input.type = key.shown ? 'text' : 'password'; eye.replaceChildren(icon(key.shown ? 'eyeOff' : 'eye')); input.focus(); } }, icon(key.shown ? 'eyeOff' : 'eye'));
     const save = h('button', { class: 'btn primary', disabled: !key.value.trim() || key.state === 'checking', onclick: () => saveKey(p) }, key.state === 'checking' ? 'Checking…' : 'Verify and save');
     const status = h('div', { class: 'key-status' + (key.state === 'error' ? ' err' : '') }, key.state === 'checking' ? 'Checking the key with ' + p.by + '…' : key.message || '');
     return h('div', { class: 'pp-card' }, head,
