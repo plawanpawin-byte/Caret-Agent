@@ -53,6 +53,7 @@ export function createProviders() {
     render();
   }
   const render = () => { renderList(); renderPage(); };
+  renderList(); // shows "Loading…" until the first status comes back
 
   async function act(p, kind) {
     working.set(p.id, kind); progress.delete(p.id); render();
@@ -96,7 +97,7 @@ export function createProviders() {
     const ready = shown.filter(p => p.ready), rest = shown.filter(p => !p.ready);
     const sec = (title, list) => list.length ? [h('div', { class: 'prov-sec' }, h('span', { class: 'grow', text: title }), h('span', { class: 'prov-count', text: String(list.length) })), ...list.map(row)] : [];
     const out = [...sec('Ready', ready), ...sec(ready.length ? 'Available' : 'Set up an AI', rest)];
-    return out.length ? out : [h('div', { class: 'muted', style: { padding: '8px 12px' }, text: items.length ? 'No match' : 'Loading…' })];
+    return out.length ? out : [h('div', { class: 'muted', style: { padding: '8px 12px' }, text: items.length ? 'No match' : 'Looking for your AIs…' })];
   }
   function renderList() { list.replaceChildren(...rows()); pageList.replaceChildren(h('div', { class: 'pp-list-head', text: 'AI providers' }), ...rows()); }
 
