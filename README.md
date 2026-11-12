@@ -5,7 +5,7 @@
 <h1 align="center">Caret Agent</h1>
 
 <p align="center">
-  <b>An AI code editor that never forgets what you were doing — even when you switch AI.</b><br>
+  <b>A desktop AI agent and code editor that never forgets what you were doing — even when you switch AI.</b><br>
   Free. Your files stay on your computer. Works with Claude Code, Codex, Grok, Antigravity (Gemini) and ChatGPT.
 </p>
 
@@ -24,7 +24,7 @@ You start a feature with Claude. The limit runs out. You move to Codex or Grok, 
 ## What you get
 
 **One memory, any AI**
-Claude, Codex, Grok, Gemini or a model running on your own machine — they all share the same project note. After every turn Caret Agent also logs what happened, so the note stays honest even if an AI forgets to update it.
+Claude, Codex, Grok, Gemini or ChatGPT — they all share the same project note. After every turn Caret Agent also logs what happened, so the note stays honest even if an AI forgets to update it.
 
 **Set up any AI from one panel**
 AI providers lists every AI Caret Agent can use and what is ready. Open one to see what it is and set it up: Claude Code and Codex install with one click and sign in through your browser; Grok, Antigravity (Gemini) and ChatGPT connect with an API key.
