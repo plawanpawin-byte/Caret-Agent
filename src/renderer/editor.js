@@ -111,6 +111,9 @@ export function createEditorArea() {
       minimap: { enabled: true, renderCharacters: false, scale: 1 }, scrollBeyondLastLine: false, smoothScrolling: true, cursorBlinking: 'smooth',
       renderLineHighlight: 'all', padding: { top: 8 }, bracketPairColorization: { enabled: true }, tabSize: 2, stickyScroll: { enabled: true },
     });
+    // A narrow editor needs its width for code, not for the minimap.
+    let mini = true;
+    new ResizeObserver(() => { const want = host.clientWidth >= 520; if (want !== mini) { mini = want; editor.updateOptions({ minimap: { enabled: want, renderCharacters: false, scale: 1 } }); } }).observe(host);
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save(active));
     editor.onDidChangeCursorPosition(e => emit('cursor', { line: e.position.lineNumber, col: e.position.column, lang: active ? active.model.getLanguageId() : '' }));
   }

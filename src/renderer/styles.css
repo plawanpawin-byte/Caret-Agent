@@ -861,3 +861,5 @@ body.agent-layout .pp-list { display: block; }
 
 /* hint text was 3.6:1 on the background; 4.8:1 reads clearly and still sits below the muted grey */
 :root { --faint: #858585; }
+
+@media (max-width: 1000px) { #sidebar { width: 190px !important; } #chatpane { width: 310px !important; } }
