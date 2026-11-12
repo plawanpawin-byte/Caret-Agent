@@ -177,8 +177,11 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
   if (resolveCli('claude')) providers.push({ id: 'claude', family: 'claude', method: 'app', name: 'Claude Code', kind: 'cli', models: ['default', 'opus', 'sonnet', 'haiku'].map(id => ({ id, key: `claude:${id}`, label: id === 'default' ? 'Claude (your default)' : `Claude ${id[0].toUpperCase() + id.slice(1)}`, tools: true, vision: true })) });
   if (resolveCli('codex')) providers.push({ id: 'codex', family: 'codex', method: 'app', name: 'Codex', kind: 'cli', models: [{ id: 'default', key: 'codex:default', label: 'Codex (your default)', tools: true, vision: true }] });
 
-  for (const p of Object.keys(CLOUD_APIS)) {
-    const list = await cloudApiModels(p);
+  // Ask every service that has a key at the same time, so a slow one does not hold up the menu.
+  const apiIds = Object.keys(CLOUD_APIS);
+  const lists = await Promise.all(apiIds.map(p => cloudApiModels(p)));
+  for (const [i, p] of apiIds.entries()) {
+    const list = lists[i];
     if (list === null) continue;
     const base = { id: p, family: CLOUD_APIS[p].family, method: 'api', name: CLOUD_APIS[p].name, kind: 'api' };
     if (list.error) providers.push({ ...base, error: list.error, models: [] });
