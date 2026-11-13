@@ -21,6 +21,7 @@ const DEFAULTS = {
     llamacpp: 'http://127.0.0.1:8080/v1',
   },
   keys: {},                    // provider -> encrypted base64
+  account: null,               // { login, token } of the GitHub sign-in; the token is encrypted
 };
 
 const ALLOWED_KEYS = new Set(['xai', 'gemini', 'openai', 'anthropic']);
@@ -63,6 +64,7 @@ function publicView() {
   for (const k of Object.keys(PUBLIC_FIELDS)) out[k] = s[k];
   out.recentFolders = s.recentFolders;
   out.lastFolder = s.lastFolder;
+  out.account = s.account && s.account.login ? { login: s.account.login } : null;
   out.keysSet = Object.fromEntries([...ALLOWED_KEYS].map(k => [k, !!s.keys[k]]));
   return out;
 }
@@ -92,6 +94,20 @@ function getKey(provider) {
   try { return safeStorage.decryptString(Buffer.from(enc, 'base64')); } catch { return null; }
 }
 
+function setAccount({ login, token }) {
+  if (typeof login !== 'string' || typeof token !== 'string' || !login || token.length > 200) throw new Error('Invalid account');
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('This system has no secure storage, so the sign-in cannot be saved.');
+  const s = load();
+  s.account = { login: login.slice(0, 80), token: safeStorage.encryptString(token).toString('base64') };
+  save();
+}
+function getAccountToken() {
+  const enc = load().account && load().account.token;
+  if (!enc) return null;
+  try { return safeStorage.decryptString(Buffer.from(enc, 'base64')); } catch { return null; }
+}
+function clearAccount() { const s = load(); s.account = null; save(); }
+
 function addRecentFolder(dir) {
   const s = load();
   s.recentFolders = [dir, ...s.recentFolders.filter(d => d !== dir)].slice(0, 10);
@@ -99,4 +115,4 @@ function addRecentFolder(dir) {
   save();
 }
 
-module.exports = { load, update, publicView, setKey, getKey, addRecentFolder };
+module.exports = { load, update, publicView, setKey, getKey, addRecentFolder, setAccount, getAccountToken, clearAccount };

@@ -8,7 +8,7 @@
 const path = require('path');
 const ws = require('./workspace');
 
-const READ = new Set(['list_dir', 'read_file', 'search', 'update_progress', 'write_plan', 'open_preview',
+const READ = new Set(['list_dir', 'read_file', 'search', 'update_progress', 'update_tasks', 'write_plan', 'open_preview',
   'Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebSearch', 'WebFetch', 'NotebookRead', 'ExitPlanMode']);
 const WRITE = new Set(['write_file', 'edit_file', 'delete_file', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const EXEC = new Set(['run_command', 'Bash', 'PowerShell']);

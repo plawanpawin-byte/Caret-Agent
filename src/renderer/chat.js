@@ -156,11 +156,24 @@ export function createChat() {
 
   // While a tool is still running it should not read as finished.
   const RUNNING_VERB = { Read: 'Reading', Wrote: 'Writing', Edited: 'Editing', Deleted: 'Deleting', Listed: 'Listing', 'Found files': 'Finding files', Searched: 'Searching', Ran: 'Running', Started: 'Starting', 'Opened preview': 'Opening preview', 'Updated project memory': 'Updating project memory', 'Saved plan': 'Saving plan', 'Updated task list': 'Updating task list', 'Read web page': 'Reading web page', 'Searched the web': 'Searching the web' };
+  // The AI splits the request into tasks (TodoWrite for Claude, update_tasks for the others); the latest list is shown as a checklist.
+  const TASK_TOOLS = /^(TodoWrite|update_tasks)$/;
+  function taskList(p) {
+    const list = (p.args?.todos || p.args?.tasks || []).filter(t => t && typeof t.content === 'string').slice(0, 20);
+    if (!list.length) return null;
+    const done = list.filter(t => t.status === 'completed').length;
+    return h('div', { class: 'tasks' },
+      h('div', { class: 'tasks-head', text: `${done} of ${list.length} tasks done` }),
+      ...list.map(t => h('div', { class: 'task ' + (t.status || 'pending') },
+        h('span', { class: 'tk' }, t.status === 'completed' ? icon('check') : null),
+        h('span', { class: 'tt', text: t.status === 'in_progress' && t.activeForm ? t.activeForm : t.content }))));
+  }
   function renderPart(p) {
     if (p.type === 'text') { const d = h('div', { class: 'md' }); mountMarkdown(d, p.text); return d; }
     if (p.type === 'thinking') return h('details', { class: 'thinking' }, h('summary', { text: 'Thinking' }), h('div', { text: p.text }));
     if (p.type === 'error') return h('div', { class: 'part-error', text: p.text });
     if (p.type === 'note') return h('div', { class: 'part-note', text: p.text });
+    if (p.type === 'tool' && TASK_TOOLS.test(p.name || '')) return taskList(p);
     if (p.type === 'tool') {
       const [done, target] = toolLabel(p);
       const verb = (!p.status || p.status === 'running') ? (RUNNING_VERB[done] || done) : done;
@@ -187,7 +200,11 @@ export function createChat() {
         h('div', { class: 'msg-meta' }, item.mode ? h('span', { text: MODES[item.mode]?.label + ' mode' }) : null, !item.thumbs && item.images?.length ? h('span', { text: `· ${item.images.length} image${item.images.length > 1 ? 's' : ''}` }) : null));
     }
     const box = h('div', { class: 'msg assistant' });
-    for (const p of item.parts || []) { const n = renderPart(p); if (n) box.append(n); }
+    const lastTasks = (item.parts || []).map((p, i) => p.type === 'tool' && TASK_TOOLS.test(p.name || '') ? i : -1).filter(i => i >= 0).pop();
+    (item.parts || []).forEach((p, i) => {
+      if (p.type === 'tool' && TASK_TOOLS.test(p.name || '') && i !== lastTasks) return;   // older versions of the list
+      const n = renderPart(p); if (n) box.append(n);
+    });
     if (isLast && c.running) box.append(h('div', { class: 'working', text: (item.parts || []).length ? 'Working…' : `Starting ${item.model ? modelLabel(item.model) : ''}…` }));
     if (!c.running && item.model) {
       const answer = (item.parts || []).filter(p => p.type === 'text').map(p => p.text).join('').trim();

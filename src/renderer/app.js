@@ -4,9 +4,10 @@ import { createExplorer } from './explorer.js';
 import { createEditorArea } from './editor.js';
 import { createTerminalPanel } from './terminal.js';
 import { createChat } from './chat.js';
-import { onboarding, openSettings, cloneDialog } from './dialogs.js';
+import { onboarding, openSettings, cloneDialog, loginGate } from './dialogs.js';
 import { createPalette } from './palette.js';
 import { createProviders } from './providers.js';
+import { createExtensions } from './extensions.js';
 
 const $ = id => document.getElementById(id);
 const store = { get: (k, d) => { try { const v = localStorage.getItem('caret.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem('caret.' + k, JSON.stringify(v)); } catch {} } };
@@ -22,6 +23,7 @@ async function boot() {
   const chat = createChat();
   const search = createSearch();
   const providersPanel = createProviders();
+  const extPanel = createExtensions();
   let side = 'explorer';
 
   // ---------- title bar ----------
@@ -83,6 +85,7 @@ async function boot() {
       { label: 'Terminal', key: 'Ctrl+`', icon: 'terminal', onClick: () => emit('cmd', 'toggle-bottom') },
       { label: state.layout === 'agent' ? 'Files' : 'AI panel', key: 'Ctrl+Alt+B', icon: 'files', onClick: () => emit('cmd', 'toggle-chat') }, 'sep',
       { label: 'Models and API keys', key: 'Ctrl+Shift+X', icon: 'key', onClick: () => emit('cmd', 'providers') },
+      { label: 'Extensions', icon: 'extensions', onClick: () => emit('cmd', 'extensions') },
       { label: state.layout === 'agent' ? 'Open IDE' : 'Exit IDE (Agent)', icon: state.layout === 'agent' ? 'code' : 'agent', onClick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') },
     ],
     Help: () => [
@@ -171,6 +174,7 @@ async function boot() {
   $('sessions').append(
     h('div', { class: 'ag-nav' },
       h('button', { class: 'ag-item strong', onclick: () => newTask() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
+      h('button', { class: 'ag-item', onclick: () => extPanel.open() }, icon('extensions'), h('span', { class: 'grow', text: 'Extensions' })),
       h('button', { class: 'ag-item', onclick: () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } } }, icon('search'), h('span', { class: 'grow', text: 'Search chats' })),
     ),
     h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Projects' }),
@@ -286,7 +290,7 @@ async function boot() {
     const which = side;
     for (const [k, b] of Object.entries(activityItems)) b.classList.toggle('on', l === 'studio' && k === which);
     // The overlay page for an AI provider lives over whichever centre is showing.
-    (l === 'agent' ? $('agent-center') : document.querySelector('#studio main.center')).append(providersPanel.page);
+    (l === 'agent' ? $('agent-center') : document.querySelector('#studio main.center')).append(providersPanel.page, extPanel.page);
     if (l === 'agent') {
       paintProjects();
       $('agent-center').append(chat.el, agentTerm);
@@ -393,6 +397,7 @@ async function boot() {
       else if (c === 'focus-chat') { if (state.layout === 'studio') showPane('chatpane', true); chat.focus(); }
       else if (c === 'settings-models') openSettings('models');
       else if (c === 'providers') providersPanel.openList();
+      else if (c === 'extensions') extPanel.open();
       else if (c?.providers) providersPanel.openList(c.providers, c.method);
       else if (c === 'search') { goSide('search'); }
       else if (c === 'explorer') { goSide('explorer'); }
@@ -420,6 +425,10 @@ async function boot() {
 
   paintWorkspace();
   setLayout(store.get('layout', null) || state.settings.layout || 'studio');
+
+  // Nobody gets in without signing in with GitHub (through the Carnet website).
+  state.settings.account = await api.auth.account().catch(() => state.settings.account);
+  if (!state.settings.account) await loginGate();
 
   if (!state.settings.onboarded) {
     await onboarding();

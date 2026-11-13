@@ -17,12 +17,13 @@ const ALL = {
   run_command: fn('run_command', 'Run a shell command in the project folder, in a terminal the user can see. Use background:true for servers and watchers (returns after start-up with any local URL).', { command: { type: 'string' }, background: { type: 'boolean' } }, ['command']),
   open_preview: fn('open_preview', 'Open a local web address (http://localhost:PORT) in the app\'s preview window.', { url: { type: 'string' } }, ['url']),
   update_progress: fn('update_progress', 'Save the hand-off note for the next AI in .caret/HANDOFF.md. Call this before you finish.', { state: { type: 'string', description: 'What the project is, what is done, what is half-done' }, next_steps: { type: 'array', items: { type: 'string' } } }, ['state', 'next_steps']),
+  update_tasks: fn('update_tasks', 'Show the user your task list. Call it first to split the request into short steps, and again whenever a step starts or finishes.', { tasks: { type: 'array', items: { type: 'object', properties: { content: { type: 'string', description: 'The step, a few words' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed'] } }, required: ['content', 'status'] } } }, ['tasks']),
   write_plan: fn('write_plan', 'Save a plan to .caret/PLAN.md (Markdown).', { content: { type: 'string' } }, ['content']),
 };
 
 const BY_MODE = {
   plan: ['list_dir', 'read_file', 'search', 'write_plan', 'update_progress'],
-  code: ['list_dir', 'read_file', 'search', 'write_file', 'edit_file', 'delete_file', 'run_command', 'update_progress'],
+  code: ['update_tasks', 'list_dir', 'read_file', 'search', 'write_file', 'edit_file', 'delete_file', 'run_command', 'update_progress'],
   agent: Object.keys(ALL),
 };
 
@@ -140,6 +141,8 @@ async function execute(name, args, run) {
     case 'update_progress':
       await memory.updateState(args);
       return 'Hand-off note saved to .caret/HANDOFF.md.';
+    case 'update_tasks':
+      return 'Task list shown to the user.';
     case 'write_plan':
       await memory.writePlan(args.content);
       run.files.push('.caret/PLAN.md');

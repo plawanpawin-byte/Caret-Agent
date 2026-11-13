@@ -45,6 +45,24 @@ npm start
 5. **Switch AI when you need to.** Hit a limit? Pick another model in the same chat. It reads `.caret/HANDOFF.md` and carries on. Nothing to re-explain.
 6. **Stop any time.** The white stop button in the prompt bar ends the run. When the AI finishes, the chat stops showing "Working…" by itself.
 
+## Extensions
+
+Open **Extensions** (in the Agent side bar, the menu, or the command palette) to add more power to Claude Code without leaving the app. Search, filter by MCP, Skills or Tools, read what each one does, and press **Install**. Nothing sends you to a web page.
+
+- **GitHub** MCP: read repositories, issues, pull requests and Actions runs.
+- **Superpowers**: a plan-first, test-first development method for your agent.
+- **aislop**: catches the leftovers AI agents write (dead code, swallowed errors).
+- **REA**: reverse engineer how an app works.
+- **Roblox Studio** MCP: build and edit a Roblox game from the chat (needs Roblox Studio).
+
+## Task lists
+
+Give the AI a job and it first splits your request into short tasks, such as "Create the HTML page", "Style it", "Push to GitHub", and ticks them off as it works.
+
+## Sign-in
+
+The first launch asks you to **Continue with GitHub**. It opens the Carnet website in your browser and, once you sign in there, the app is signed in too. The website only learns your GitHub username.
+
 ## Why use it
 
 - **Never re-explain your project.** One shared memory file works across every AI.

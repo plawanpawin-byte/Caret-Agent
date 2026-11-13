@@ -28,6 +28,36 @@ function overlay(content, { dismiss = true } = {}) {
 function miniStudio() { return h('div', { class: 'mini' }, h('i', { style: { width: '8%' } }), h('i', { style: { width: '20%' } }), h('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' } }, h('i', { style: { flex: 3 } }), h('i', { style: { flex: 1 } })), h('i', { style: { width: '26%', background: '#3a2f1e' } })); }
 function miniAgent() { return h('div', { class: 'mini' }, h('i', { style: { width: '22%' } }), h('div', { style: { flex: 1, display: 'grid', placeItems: 'center' } }, h('i', { style: { width: '80%', height: '22%', background: '#3a2f1e' } })), h('i', { style: { width: '20%' } })); }
 
+// First launch: one way in, GitHub. The browser opens the Carnet website; when the person signs in there, the app is signed in too.
+export function loginGate() {
+  return new Promise(resolve => {
+    const status = h('div', { class: 'login-status muted' });
+    const btn = h('button', { class: 'btn primary login-btn' }, icon('github'), 'Continue with GitHub');
+    const cancel = h('button', { class: 'login-cancel hidden', text: 'Cancel' });
+    const box = h('div', { class: 'modal login' },
+      h('div', { class: 'login-logo' }, logo(40)),
+      h('h1', { text: 'Welcome to Caret Agent' }),
+      h('p', { class: 'lead', text: 'Sign in to continue. Your files and chats stay on this computer.' }),
+      btn, status, cancel);
+    const o = overlay(box, { dismiss: false });
+    const busy = on => { btn.disabled = on; cancel.classList.toggle('hidden', !on); };
+    async function go() {
+      busy(true); status.textContent = 'Finish signing in in your browser…'; status.classList.remove('err');
+      try {
+        const a = await api.auth.signIn();
+        state.settings = await api.settings.get();
+        o.remove(); resolve(a);
+      } catch (e) {
+        busy(false);
+        status.textContent = String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '') || 'Sign-in did not finish.';
+        status.classList.add('err');
+      }
+    }
+    btn.onclick = go;
+    cancel.onclick = () => api.auth.cancel();
+  });
+}
+
 export function onboarding() {
   return new Promise(resolve => {
     const data = { name: state.settings.name || state.info?.user || '', role: state.settings.role || '', layout: state.settings.layout || 'studio' };

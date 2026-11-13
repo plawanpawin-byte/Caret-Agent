@@ -38,6 +38,8 @@ export function buildCommands(ctx) {
     // AI
     c('AI: New Chat', () => emit('cmd', 'new-chat'), 'Ctrl+T'),
     c('AI: Ask the AI', () => emit('cmd', 'focus-chat'), 'Ctrl+L'),
+    c('Account: Sign out', async () => { await api.auth.signOut(); location.reload(); }),
+    c('AI: Extensions…', () => emit('cmd', 'extensions')),
     c('AI: Models and API Keys…', () => emit('cmd', 'providers'), 'Ctrl+Shift+X'),
     // terminal
     c('Terminal: New Terminal', () => emit('cmd', 'new-terminal')),
