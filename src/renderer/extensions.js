@@ -55,6 +55,9 @@ export function createExtensions() {
 
   const avatar = (id, size) => {
     const [bg, txt] = TINT[id] || ['#444', '?'];
+    // Real logos: GitHub's mark (white on black) and the Roblox Studio icon.
+    if (id === 'roblox-studio') return h('img', { class: 'ext-ico', src: './roblox.png', alt: '', style: { width: size + 'px', height: size + 'px', background: 'none' } });
+    if (id === 'github-mcp') { const el = h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: '#000' } }, icon('github')); const sv = el.querySelector('svg'); if (sv) { sv.style.width = sv.style.height = Math.round(size * .62) + 'px'; sv.style.fill = '#fff'; } return el; }
     return h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: bg, fontSize: Math.round(size * .36) + 'px' }, text: txt });
   };
 
