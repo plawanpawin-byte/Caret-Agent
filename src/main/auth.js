@@ -10,7 +10,9 @@ const settings = require('./settings');
 
 const DEFAULT_SITE = 'https://carnet.scratch-2026-11-04-b765df.workers.dev';
 // CARET_SITE is a test hook for a local copy of the website (wrangler dev).
-const SITE = /^(https:\/\/[a-z0-9.-]+|http:\/\/127\.0\.0\.1:\d+)$/i.test(process.env.CARET_SITE || '') ? process.env.CARET_SITE : DEFAULT_SITE;
+// In the installed app the address is fixed; the override only works when started from source.
+const OVERRIDE = require('electron').app.isPackaged ? '' : (process.env.CARET_SITE || '');
+const SITE = /^(https:\/\/[a-z0-9.-]+|http:\/\/127\.0\.0\.1:\d+)$/i.test(OVERRIDE) ? OVERRIDE : DEFAULT_SITE;
 const WAIT_MS = 5 * 60 * 1000;
 
 const b64u = buf => Buffer.from(buf).toString('base64url');

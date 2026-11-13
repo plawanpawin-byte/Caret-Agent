@@ -1,87 +1,132 @@
-// Extensions: a small marketplace for the Claude Code app. A list on the left (search, categories on top,
-// Installed and Recommended below), the details of the chosen one on the right. Install and remove happen here.
+// Connectors: a marketplace for what the AI can plug into (GitHub, Cloudflare, Roblox Studio, ...).
+// Two tabs, Marketplace and Installed, a search box, groups of cards. A card opens its details, where the
+// connector is installed or removed. Keys are always the person's own; they go to Claude Code, not to any website.
 import { h, icon, toast } from './ui.js';
 import { api } from './state.js';
 
 const clean = e => String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-const CATS = ['All', 'MCP', 'Skills'];
-const TINT = { 'github-mcp': ['#24292f', 'GH'], superpowers: ['#52525b', 'SP'], aislop: ['#52525b', 'AS'], rea: ['#52525b', 'RE'], 'roblox-studio': ['#e11d48', 'RB'] };
+const GROUPS = ['Source control', 'Cloud and hosting', 'Docs and planning', 'Browser and testing', 'Game development', 'Skills and tools'];
+const SUB = {
+  'Source control': 'Repositories, issues and pull requests.',
+  'Cloud and hosting': 'Deploy and manage your apps and databases.',
+  'Docs and planning': 'Current documentation, notes and issue trackers.',
+  'Browser and testing': 'Let the AI open a browser and check its own work.',
+  'Game development': 'Build games from inside their editors.',
+  'Skills and tools': 'Methods and checkers that make the AI work better.',
+};
+// Brand colours for the letter tiles. GitHub and Roblox Studio have real logos (see avatar()).
+const TINT = {
+  cloudflare: ['#f6821f', 'CF'], 'cloudflare-docs': ['#f6821f', 'CD'], supabase: ['#1f8f5f', 'SB'], firebase: ['#f5a300', 'FB'],
+  context7: ['#2a2a2a', 'C7'], 'sequential-thinking': ['#52525b', 'ST'], notion: ['#2b2b2b', 'N'], linear: ['#5e6ad2', 'LN'],
+  playwright: ['#2e7d32', 'PW'], 'chrome-devtools': ['#1a73e8', 'DT'], superpowers: ['#52525b', 'SP'], aislop: ['#52525b', 'AS'], rea: ['#52525b', 'RE'],
+};
 
 export function createExtensions() {
   let data = { claude: true, items: [] };
-  let current = null;          // id shown on the right
-  let cat = 'All';
+  let view = 'market';         // 'market' | 'installed' | 'detail'
+  let tabBefore = 'market';
+  let current = null;
   let query = '';
-  let tab = 'details';
   const working = new Map();   // id -> 'install' | 'uninstall'
   const lastLine = new Map();
   let token = '';
 
-  const search = h('input', { class: 'ext-search', placeholder: 'Search extensions', spellcheck: 'false', oninput: e => { query = e.target.value.trim().toLowerCase(); renderList(); } });
-  const tabsEl = h('div', { class: 'ext-cats' });
-  const listEl = h('div', { class: 'ext-list-body' });
-  const bodyEl = h('div', { class: 'ext-body' });
-  const closeBtn = h('button', { class: 'icon-btn pp-close', title: 'Close (Esc)', onclick: () => close() }, icon('x'));
-  const page = h('div', { class: 'ext-page hidden' },
-    h('div', { class: 'ext-list' },
-      h('div', { class: 'ext-head' }, h('div', { class: 'ext-title', text: 'Extensions' }),
-        h('button', { class: 'icon-btn', title: 'Refresh', onclick: () => load() }, icon('refresh'))),
-      h('div', { class: 'ext-searchbox' }, icon('search'), search),
-      tabsEl, listEl),
-    bodyEl, closeBtn);
+  const search = h('input', { class: 'cn-search', placeholder: 'Search connectors…', spellcheck: 'false', oninput: e => { query = e.target.value.trim().toLowerCase(); if (view === 'detail') view = tabBefore; render(); } });
+  const seg = h('div', { class: 'cn-seg' });
+  const body = h('div', { class: 'cn-body' });
+  const page = h('div', { class: 'ext-page cn-page hidden' },
+    h('div', { class: 'cn-wrap' },
+      h('div', { class: 'cn-head' }, h('h1', { text: 'Connectors' }), seg),
+      h('div', { class: 'cn-searchbox' }, icon('search'), search),
+      body),
+    h('button', { class: 'icon-btn pp-close', title: 'Close (Esc)', onclick: () => close() }, icon('x')));
 
   api.extensions.onProgress(({ id, line }) => {
     lastLine.set(id, line);
-    const t = page.querySelector('.ext-log');
+    const t = page.querySelector('.cn-log');
     if (t && id === current) t.textContent = line;
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !e.defaultPrevented && !page.classList.contains('hidden') && !document.querySelector('.menu, .overlay')) close();
+    if (e.key === 'Escape' && !e.defaultPrevented && !page.classList.contains('hidden') && !document.querySelector('.menu, .overlay')) {
+      if (view === 'detail') { view = tabBefore; render(); } else close();
+    }
   });
 
   async function load() {
     try { data = await api.extensions.status(); } catch (e) { toast(clean(e), { error: true }); }
-    if (!current && data.items.length) current = (data.items.find(i => i.recommended && !i.installed) || data.items[0]).id;
     render();
   }
-  const render = () => { renderTabs(); renderList(); renderBody(); };
   function open(id) {
-    if (id) current = id;
     page.classList.remove('hidden');
-    load();
+    if (id) { current = id; tabBefore = view === 'detail' ? 'market' : view; view = 'detail'; }
+    else view = view === 'detail' ? tabBefore : view;
+    render(); load();
     setTimeout(() => search.focus(), 30);
   }
   function close() { page.classList.add('hidden'); }
 
-  const avatar = (id, size) => {
+  // ---------- icons ----------
+  function avatar(id, size) {
+    const mk = (cls, style, ...kids) => h('span', { class: 'cn-ico ' + cls, style: { width: size + 'px', height: size + 'px', borderRadius: Math.round(size * .24) + 'px', ...style } }, ...kids);
+    if (id === 'roblox-studio') return h('img', { class: 'cn-ico', src: './roblox.png', alt: '', style: { width: size + 'px', height: size + 'px', borderRadius: Math.round(size * .24) + 'px' } });
+    if (id === 'github-mcp') {
+      const el = mk('', { background: '#000', border: '1px solid #2a2723' }, icon('github'));
+      const sv = el.querySelector('svg'); if (sv) { sv.style.width = sv.style.height = Math.round(size * .6) + 'px'; sv.style.fill = '#fff'; }
+      return el;
+    }
     const [bg, txt] = TINT[id] || ['#444', '?'];
-    // Real logos: GitHub's mark (white on black) and the Roblox Studio icon.
-    if (id === 'roblox-studio') return h('img', { class: 'ext-ico', src: './roblox.png', alt: '', style: { width: size + 'px', height: size + 'px', background: 'none' } });
-    if (id === 'github-mcp') { const el = h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: '#000' } }, icon('github')); const sv = el.querySelector('svg'); if (sv) { sv.style.width = sv.style.height = Math.round(size * .62) + 'px'; sv.style.fill = '#fff'; } return el; }
-    return h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: bg, fontSize: Math.round(size * .36) + 'px' }, text: txt });
-  };
-
-  function renderTabs() {
-    tabsEl.replaceChildren(...CATS.map(c => h('button', { class: 'ext-cat' + (c === cat ? ' on' : ''), text: c, onclick: () => { cat = c; renderTabs(); renderList(); } })));
+    return mk('', { background: bg, fontSize: Math.round(size * .36) + 'px' }, txt);
   }
-  const matches = i => (cat === 'All' || i.category === cat) && (!query || (i.name + ' ' + i.summary + ' ' + i.by + ' ' + i.category).toLowerCase().includes(query));
 
-  function row(i) {
+  // ---------- pieces ----------
+  const matches = i => !query || (i.name + ' ' + i.summary + ' ' + i.by + ' ' + (i.group || '')).toLowerCase().includes(query);
+  const openDetail = id => { tabBefore = view === 'detail' ? tabBefore : view; current = id; token = ''; view = 'detail'; render(); };
+
+  function card(i) {
     const w = working.get(i.id);
-    const state = w ? h('span', { class: 'ext-state busy', text: w === 'install' ? 'Installing…' : 'Removing…' })
-      : i.installed ? h('span', { class: 'ext-state ok' }, icon('check'), 'Installed')
-        : h('span', { class: 'ext-state btn', text: 'Install' });
-    return h('button', { class: 'ext-row' + (i.id === current ? ' on' : ''), title: i.name, onclick: () => { current = i.id; tab = 'details'; token = ''; render(); } },
-      avatar(i.id, 40),
-      h('span', { class: 'ext-main' }, h('span', { class: 'ext-name', text: i.name }), h('span', { class: 'ext-sum', text: i.summary }), h('span', { class: 'ext-by', text: i.by + ' · ' + i.category })),
-      state);
+    const tail = w ? h('span', { class: 'cn-state', text: w === 'install' ? 'Installing…' : 'Removing…' })
+      : i.installed ? h('span', { class: 'cn-state ok', title: 'Installed' }, icon('check'))
+        : h('span', { class: 'cn-add', title: 'Add' }, icon('plus'));
+    return h('button', { class: 'cn-card', onclick: () => openDetail(i.id) },
+      avatar(i.id, 44),
+      h('span', { class: 'cn-main' }, h('span', { class: 'cn-name', text: i.name }), h('span', { class: 'cn-sum', text: i.summary })),
+      tail);
   }
-  function renderList() {
+
+  function featured() {
+    const i = data.items.find(x => x.id === 'github-mcp');
+    if (!i || query) return null;
+    const floating = ['github-mcp', 'cloudflare', 'supabase', 'linear', 'notion', 'playwright'];
+    const tiles = floating.map((id, k) => h('div', { class: 'cn-float f' + k }, avatar(id, 54)));
+    return h('div', { class: 'cn-feature' },
+      h('div', { class: 'cn-art' }, ...tiles),
+      h('div', { class: 'cn-fmain' },
+        h('div', { class: 'cn-kicker', text: 'Featured' }),
+        h('div', { class: 'cn-ftitle', text: i.name }),
+        h('p', { text: 'Let the AI work with your repositories, issues and pull requests, using the GitHub account you signed in with.' }),
+        h('div', { class: 'cn-factions' },
+          i.installed ? h('span', { class: 'cn-state ok' }, icon('check'), 'Installed')
+            : h('button', { class: 'cn-btn blue', onclick: () => doInstall(i), text: '+ Add' }),
+          h('button', { class: 'cn-btn', onclick: () => openDetail(i.id), text: 'Details' }))));
+  }
+
+  function market() {
     const shown = data.items.filter(matches);
-    const inst = shown.filter(i => i.installed), rec = shown.filter(i => !i.installed);
-    const section = (label, list) => list.length ? [h('div', { class: 'ext-sec' }, h('span', { text: label }), h('span', { class: 'ext-count', text: String(list.length) })), ...list.map(row)] : [];
-    const parts = [...section('Installed', inst), ...section('Recommended', rec)];
-    listEl.replaceChildren(...(parts.length ? parts : [h('div', { class: 'ext-none', text: 'No extension matches.' })]));
+    const out = [];
+    if (!data.claude) out.push(h('div', { class: 'cn-note', text: 'Claude Code is not installed yet. Connectors work through it: set it up from the model menu first.' }));
+    const f = featured(); if (f) out.push(f);
+    for (const g of GROUPS) {
+      const list = shown.filter(i => (i.group || 'Skills and tools') === g);
+      if (!list.length) continue;
+      out.push(h('section', { class: 'cn-group' }, h('h2', { text: g }), h('p', { text: SUB[g] }), h('div', { class: 'cn-grid' }, ...list.map(card))));
+    }
+    if (!shown.length) out.push(h('div', { class: 'cn-none', text: 'No connector matches.' }));
+    return out;
+  }
+  function installed() {
+    const list = data.items.filter(i => i.installed && matches(i));
+    if (!list.length) return [h('div', { class: 'cn-none', text: query ? 'No installed connector matches.' : 'Nothing installed yet. Open the Marketplace and add one.' })];
+    return [h('div', { class: 'cn-grid' }, ...list.map(card))];
   }
 
   async function doInstall(i) {
@@ -90,7 +135,7 @@ export function createExtensions() {
     try {
       await api.extensions.install(i.id, { token });
       token = '';
-      toast(`${i.name} installed. Restart Claude Code chats to use it.`);
+      toast(`${i.name} connected. Start a new conversation to use it.`);
     } catch (e) { toast(clean(e), { error: true }); }
     working.delete(i.id);
     await load();
@@ -103,39 +148,46 @@ export function createExtensions() {
     await load();
   }
 
-  function renderBody() {
+  function detail() {
     const i = data.items.find(x => x.id === current);
-    if (!i) { bodyEl.replaceChildren(h('div', { class: 'pp-empty muted', text: 'Choose an extension on the left.' })); return; }
+    if (!i) return [h('div', { class: 'cn-none', text: 'Choose a connector.' })];
     const w = working.get(i.id);
-    const needsToken = i.needsToken && !i.installed;
-    const tokenBox = needsToken ? h('div', { class: 'ext-token' },
-      h('label', { text: 'GitHub personal access token' }),
-      h('input', { type: 'password', class: 'key-input', placeholder: 'ghp_… or github_pat_…', value: token, autocomplete: 'off', spellcheck: 'false', oninput: e => { token = e.target.value; } }),
-      h('div', { class: 'muted', text: 'Stored by Claude Code on this computer. Give the token only the permissions you want the AI to have.' })) : null;
-    const action = w ? h('button', { class: 'btn primary', disabled: true, text: w === 'install' ? 'Installing…' : 'Removing…' })
-      : i.installed ? h('button', { class: 'btn', onclick: () => doRemove(i), text: 'Uninstall' })
-        : h('button', { class: 'btn primary', disabled: !!i.blocked, onclick: () => doInstall(i), text: 'Install' });
-    const detail = h('div', { class: 'ext-detail' },
-      ...i.about.map(t => h('p', { text: t })),
-      h('h3', { text: 'What it does' }),
-      h('ul', {}, ...i.features.map(f => h('li', { text: f }))));
-    bodyEl.replaceChildren(
-      h('div', { class: 'ext-hero' }, avatar(i.id, 88),
+    // GitHub signs in with the account already used for Caret Agent; every other connector that needs a key asks for the person's own.
+    const own = i.needsToken && i.id !== 'github-mcp' && !i.installed;
+    const tokenBox = own ? h('div', { class: 'ext-token' },
+      h('label', { text: i.tokenLabel || 'Your key' }),
+      h('input', { type: 'password', class: 'key-input', placeholder: 'Paste your own key', value: token, autocomplete: 'off', spellcheck: 'false', oninput: e => { token = e.target.value; } }),
+      h('div', { class: 'muted', text: (i.tokenHint ? i.tokenHint + ' ' : '') + 'It is passed to Claude Code and kept on this computer only.' })) : null;
+    const action = w ? h('button', { class: 'cn-btn blue', disabled: true, text: w === 'install' ? 'Installing…' : 'Removing…' })
+      : i.installed ? h('button', { class: 'cn-btn', onclick: () => doRemove(i), text: 'Remove' })
+        : h('button', { class: 'cn-btn blue', disabled: !!i.blocked, onclick: () => doInstall(i), text: '+ Add' });
+    const fact = (k, v) => h('div', { class: 'ext-fact' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', text: v }));
+    return [
+      h('button', { class: 'cn-back', onclick: () => { view = tabBefore; render(); } }, icon('chevronLeft'), 'Back'),
+      h('div', { class: 'ext-hero' }, avatar(i.id, 84),
         h('div', { class: 'ext-hero-main' },
           h('h1', { text: i.name }),
           h('div', { class: 'ext-hero-by', text: i.by }),
           h('p', { class: 'ext-hero-sum', text: i.summary }),
-          h('div', { class: 'ext-actions' }, action, i.installed ? h('span', { class: 'ext-state ok' }, icon('check'), 'Installed') : null),
+          h('div', { class: 'ext-actions' }, action, i.installed ? h('span', { class: 'cn-state ok' }, icon('check'), 'Connected') : null),
           i.blocked && !i.installed ? h('div', { class: 'ext-blocked', text: i.blocked }) : null,
           tokenBox,
-          h('div', { class: 'ext-log muted', text: w ? (lastLine.get(i.id) || 'Working…') : '' }))),
+          h('div', { class: 'cn-log muted', text: w ? (lastLine.get(i.id) || 'Working…') : '' }))),
       h('div', { class: 'ext-cols' },
-        h('div', { class: 'ext-text' }, detail),
-        h('div', { class: 'ext-facts' },
-          h('h4', { text: 'Details' }),
-          fact('Category', i.category), fact('Source', i.repo), fact('Works with', 'Claude Code'), fact('Installs from', i.id === 'github-mcp' ? 'GitHub (hosted)' : i.id === 'roblox-studio' ? 'Roblox Studio on this PC' : 'The author\'s package'))));
+        h('div', { class: 'ext-text' }, h('div', { class: 'ext-detail' },
+          ...i.about.map(t => h('p', { text: t })),
+          h('h3', { text: 'What it does' }), h('ul', {}, ...i.features.map(f => h('li', { text: f }))))),
+        h('div', { class: 'ext-facts' }, h('h4', { text: 'Details' }),
+          fact('Group', i.group || i.category), fact('Source', i.repo), fact('Works with', 'Claude Code'),
+          fact('Key', i.needsToken ? (i.id === 'github-mcp' ? 'Your GitHub sign-in' : 'Your own, kept on this PC') : 'None needed'))),
+    ];
   }
-  const fact = (k, v) => h('div', { class: 'ext-fact' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', text: v }));
+
+  function render() {
+    seg.replaceChildren(...[['market', 'Marketplace'], ['installed', 'Installed']].map(([k, t]) =>
+      h('button', { class: 'cn-seg-b' + ((view === k || (view === 'detail' && tabBefore === k)) ? ' on' : ''), text: t, onclick: () => { view = k; tabBefore = k; render(); } })));
+    body.replaceChildren(...(view === 'detail' ? detail() : view === 'installed' ? installed() : market()));
+  }
 
   return { page, open, close };
 }

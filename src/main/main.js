@@ -6,7 +6,10 @@ const { pathToFileURL } = require('url');
 
 const cli = require('./cli');
 // Test hook: CARET_SIZE=900x600 opens the window at that size (never set in normal use).
-const TEST_SIZE = String(process.env.CARET_SIZE || '').split('x').map(Number).filter(n => n > 0);
+// Test hooks (CARET_*) only work when the app is started from source, never in the installed app.
+const DEV = !require('electron').app.isPackaged;
+const ENV = new Proxy(process.env, { get: (t, k) => (DEV || typeof k !== 'string' || !k.startsWith('CARET_') ? t[k] : undefined) });
+const TEST_SIZE = String(ENV.CARET_SIZE || '').split('x').map(Number).filter(n => n > 0);
 cli.fixPath();
 const settings = require('./settings');
 const ws = require('./workspace');
@@ -24,7 +27,7 @@ const RENDERER = path.join(APP_ROOT, 'src', 'renderer');
 const MONACO = path.join(APP_ROOT, 'node_modules', 'monaco-editor', 'min');
 
 // Separate profile for testing (CARET_USER_DATA=folder). Must run before anything reads userData.
-if (process.env.CARET_USER_DATA) app.setPath('userData', path.resolve(process.env.CARET_USER_DATA));
+if (ENV.CARET_USER_DATA) app.setPath('userData', path.resolve(ENV.CARET_USER_DATA));
 
 protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } }]);
 
@@ -74,7 +77,7 @@ function createWindow() {
     title: 'Caret Agent',
     icon: path.join(APP_ROOT, 'resources', 'icon.png'),
     titleBarStyle: 'hidden',
-    ...(isMac ? { trafficLightPosition: { x: 14, y: 12 } } : { titleBarOverlay: { color: '#0e0c0a', symbolColor: '#a0a0a0', height: 36 } }),
+    ...(isMac ? { trafficLightPosition: { x: 14, y: 12 } } : { titleBarOverlay: { color: '#0e0c0a', symbolColor: '#a0a0a0', height: 44 } }),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
@@ -86,19 +89,19 @@ function createWindow() {
     },
   });
   // In the screenshot test the window must not steal focus or react to a real mouse or keyboard.
-  win.once('ready-to-show', () => { if (process.env.CARET_SCREENSHOT) { win.setIgnoreMouseEvents(true); win.showInactive(); } else win.show(); });
+  win.once('ready-to-show', () => { if (ENV.CARET_SCREENSHOT) { win.setIgnoreMouseEvents(true); win.showInactive(); } else win.show(); });
   // Test hook: CARET_SCREENSHOT=file.png saves a picture of the window after start-up.
-  if (process.env.CARET_SCREENSHOT) {
+  if (ENV.CARET_SCREENSHOT) {
     win.webContents.on('console-message', (_e, level, message) => { if (level >= 2) console.log('[renderer]', message); });
     win.webContents.once('did-finish-load', () => setTimeout(async () => {
-      if (process.env.CARET_EVAL) {
-        try { console.log('[eval]', JSON.stringify(await win.webContents.executeJavaScript(process.env.CARET_EVAL))); } catch (e) { console.log('[eval error]', e.message); }
-        await new Promise(r => setTimeout(r, Number(process.env.CARET_EVAL_WAIT || 800)));
+      if (ENV.CARET_EVAL) {
+        try { console.log('[eval]', JSON.stringify(await win.webContents.executeJavaScript(ENV.CARET_EVAL))); } catch (e) { console.log('[eval error]', e.message); }
+        await new Promise(r => setTimeout(r, Number(ENV.CARET_EVAL_WAIT || 800)));
       }
       const img = await win.webContents.capturePage();
-      fs.writeFileSync(process.env.CARET_SCREENSHOT, img.toPNG());
+      fs.writeFileSync(ENV.CARET_SCREENSHOT, img.toPNG());
       console.log('screenshot saved');
-    }, Number(process.env.CARET_SCREENSHOT_DELAY || 5000)));
+    }, Number(ENV.CARET_SCREENSHOT_DELAY || 5000)));
   }
   // Zoom (Ctrl +, Ctrl -, Ctrl 0): the app has no menu bar on Windows and Linux, so the usual shortcuts need to be handled here.
   win.webContents.on('before-input-event', (event, input) => {
