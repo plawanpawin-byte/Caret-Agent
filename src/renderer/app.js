@@ -7,7 +7,7 @@ import { createChat } from './chat.js';
 import { onboarding, openSettings, cloneDialog, loginGate, avatarEl } from './dialogs.js';
 import { createPalette } from './palette.js';
 import { createProviders } from './providers.js';
-import { createExtensions } from './extensions.js';
+import { createExtensions } from './extensions.js';  // IDE: the Extensions page (the Agent's Connectors page is connectors.js)
 
 const $ = id => document.getElementById(id);
 const store = { get: (k, d) => { try { const v = localStorage.getItem('caret.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem('caret.' + k, JSON.stringify(v)); } catch {} } };
@@ -86,7 +86,6 @@ async function boot() {
       { label: state.layout === 'agent' ? 'Files' : 'AI panel', key: 'Ctrl+Alt+B', icon: 'files', onClick: () => emit('cmd', 'toggle-chat') }, 'sep',
       { label: 'Models and API keys', key: 'Ctrl+Shift+X', icon: 'key', onClick: () => emit('cmd', 'providers') },
       { label: 'Extensions', icon: 'extensions', onClick: () => emit('cmd', 'extensions') },
-      { label: state.layout === 'agent' ? 'Open IDE' : 'Exit IDE (Agent)', icon: state.layout === 'agent' ? 'code' : 'agent', onClick: () => setLayout(state.layout === 'agent' ? 'studio' : 'agent') },
     ],
     Help: () => [
       { label: 'Project memory', sub: '.caret/HANDOFF.md', icon: 'book', disabled: !state.workspace, onClick: () => emit('open-file-studio', '.caret/HANDOFF.md') },
@@ -112,12 +111,17 @@ async function boot() {
     next.click();
   }, true);
   const palette = createPalette({ setLayout: l => setLayout(l), openSettings: () => openSettings(), checkUpdate: () => checkUpdate() });
-  // The IDE title bar (view switch, File/Edit/View menus, command box) is parked with the IDE; see backup/ide-ui.
   $('titlebar').append(
-    h('div', { class: 'brand', title: 'Caret Agent' }, logo(22)),
-    h('button', { class: 'icon-btn', title: 'Side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
-    h('button', { class: 'icon-btn', title: 'Search conversations', onclick: () => searchChats() }, icon('search')),
-    h('div', { class: 'spacer' }));
+    h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
+    menubar,
+    h('div', { class: 'spacer' }),
+    h('div', { class: 'tools' },
+      h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
+      h('button', { class: 'icon-btn', title: 'Toggle terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('panel')),
+      h('button', { class: 'icon-btn', title: 'Toggle AI chat (Ctrl+Alt+B)', onclick: () => emit('cmd', 'toggle-chat') }, icon('sidebarRight')),
+      h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))),
+    // Last, so its no-drag area wins over the draggable spacer it sits on top of (otherwise the OS swallows the click).
+    omni);
 
   function folderMenu(anchor) {
     const recent = (state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 8);
@@ -282,7 +286,7 @@ async function boot() {
 
   // ---------- layout switching ----------
   function setLayout(l) {
-    l = 'agent'; // the IDE is parked for now (backup/ide-ui); every path ends up in the Agent
+    l = 'studio'; // the Agent is parked for now (backup/agent); every path ends up in the IDE
     state.layout = l;
     document.body.classList.toggle('agent-layout', l === 'agent');
     $('studio').classList.toggle('hidden', l !== 'studio');
@@ -431,9 +435,9 @@ async function boot() {
   state.settings.account = await api.auth.account().catch(() => state.settings.account);
   if (!state.settings.account) { await loginGate(); location.reload(); return; }   // reload: chats are kept per account
 
-  // No questions after signing in: straight to the Agent. The GitHub name is the name.
-  if (!state.settings.onboarded || state.settings.layout !== 'agent') {
-    await saveSettings({ onboarded: true, layout: 'agent' }).catch(() => {});
+  // No questions after signing in: straight to the IDE. The GitHub name is the name.
+  if (!state.settings.onboarded || state.settings.layout !== 'studio') {
+    await saveSettings({ onboarded: true, layout: 'studio' }).catch(() => {});
     emit('settings', state.settings);
   }
 }

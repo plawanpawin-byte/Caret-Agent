@@ -23,7 +23,7 @@
   --titlebar: 44px;
 }
 html, body, #root { background: var(--panel); }
-.statusbar { display: none; }
+.statusbar { background: var(--panel); border-top: 1px solid var(--border); }
 .titlebar { background: var(--panel); border-bottom: 0; gap: 4px; padding-left: 14px; }
 .titlebar .brand { margin-right: 6px; display: grid; place-items: center; }
 .titlebar .icon-btn { -webkit-app-region: no-drag; width: 28px; height: 28px; }

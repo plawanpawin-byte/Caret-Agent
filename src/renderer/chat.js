@@ -46,7 +46,7 @@ export function createChat() {
   const subHead = h('div', { class: 'chat-head' }, h('span', { class: 'chat-title', text: 'AI' }), h('span', { class: 'grow' }),
     h('button', { class: 'icon-btn', title: 'New chat (Ctrl+T)', onclick: () => newChat() }, icon('plus')),
     h('button', { class: 'icon-btn', title: 'Past chats', onclick: e => historyMenu(e.currentTarget) }, icon('history')),
-    h('button', { class: 'icon-btn', title: 'Switch to the Agent', onclick: () => emit('cmd', { layout: 'agent' }) }, icon('expand')));
+    null);
   const el = h('div', { class: 'chat' }, subHead, tabStrip, transcript, welcome, composerWrap);
   let useCodebase = false; try { useCodebase = localStorage.getItem('caret.codebase') === '1'; } catch {}
   let lastNonPlan = 'code';

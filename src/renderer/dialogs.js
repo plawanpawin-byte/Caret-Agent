@@ -169,10 +169,8 @@ export function openSettings(section) {
     const s = state.settings;
     const name = h('input', { class: 'field', value: s.name || '', maxlength: 60 });
     const role = h('select', { class: 'field' }, ...ROLES.map(([t]) => h('option', { value: t, selected: s.role === t }, t)));
-    const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'IDE (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (desktop agent)'));
     const save = h('button', { class: 'btn primary', text: 'Save', onclick: async () => {
-      await saveSettings({ name: name.value.trim(), role: role.value, layout: layout.value });
-      emit('cmd', { layout: layout.value });
+      await saveSettings({ name: name.value.trim(), role: role.value });
       toast('Saved');
     } });
     return [
@@ -181,7 +179,6 @@ export function openSettings(section) {
       row('GitHub account', 'You signed in with this', h('span', { class: 'set-val', text: s.account?.login || 'Not signed in' })),
       row('Full name', null, name),
       row('What best describes your work?', null, role),
-      row('Default view', 'Which layout opens first', layout),
       h('div', { class: 'set-actions' }, save,
         s.account ? h('button', { class: 'btn ghost', text: 'Log out', onclick: async () => { o.remove(); await api.auth.signOut(); location.reload(); } }) : null),
     ];
