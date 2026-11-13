@@ -31,9 +31,24 @@ let tabs = new Map();
 let storeFile = null;
 let saveTimer = null;
 
+// Chats are kept per signed-in account and per project: the same folder shows different history to different accounts.
+const sha = text => crypto.createHash('sha1').update(text).digest('hex').slice(0, 16);
+const chatsDir = () => path.join(app.getPath('userData'), 'chats');
+const accountName = () => String((settings.load().account && settings.load().account.login) || '').toLowerCase();
+function storeFileFor(root) {
+  const acct = accountName();
+  return path.join(chatsDir(), sha(acct + '|' + (root || '(no folder)')) + '.json');
+}
+// History saved before accounts existed belongs to the first account that signs in on this computer.
+function claimLegacy(root, target) {
+  if (!accountName() || fs.existsSync(target)) return;
+  const old = path.join(chatsDir(), sha(root || '(no folder)') + '.json');
+  try { if (fs.existsSync(old)) fs.renameSync(old, target); } catch {}
+}
 function storePath() {
-  const key = crypto.createHash('sha1').update(ws.getRoot() || '(no folder)').digest('hex').slice(0, 16);
-  return path.join(app.getPath('userData'), 'chats', key + '.json');
+  const target = storeFileFor(ws.getRoot());
+  claimLegacy(ws.getRoot(), target);
+  return target;
 }
 
 function loadTabs() {
@@ -62,8 +77,9 @@ function persist() {
 function overview(folders) {
   const rows = list => list.map(t => ({ id: t.id, title: t.title, updatedAt: t.updatedAt, running: running.has(t.id) })).sort((a, b) => b.updatedAt - a.updatedAt);
   const read = root => {
-    const key = crypto.createHash('sha1').update(root || '(no folder)').digest('hex').slice(0, 16);
-    try { return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'chats', key + '.json'), 'utf8')).tabs || []; } catch { return []; }
+    const target = storeFileFor(root);
+    claimLegacy(root, target);
+    try { return JSON.parse(fs.readFileSync(target, 'utf8')).tabs || []; } catch { return []; }
   };
   const cur = ws.getRoot() || null;
   const of = root => rows(root === cur ? [...tabs.values()] : read(root));

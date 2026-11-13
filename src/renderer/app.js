@@ -428,7 +428,7 @@ async function boot() {
 
   // Nobody gets in without signing in with GitHub (through the Carnet website).
   state.settings.account = await api.auth.account().catch(() => state.settings.account);
-  if (!state.settings.account) await loginGate();
+  if (!state.settings.account) { await loginGate(); location.reload(); return; }   // reload: chats are kept per account
 
   if (!state.settings.onboarded) {
     await onboarding();

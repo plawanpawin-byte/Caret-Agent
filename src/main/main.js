@@ -241,9 +241,9 @@ function registerIpc() {
   handle('providers:install', id => providers.install(String(id), line => send('providers:progress', { id: String(id), line })).then(() => { models.catalog().catch(() => {}); return true; }));
   handle('providers:signIn', id => providers.signIn(String(id), line => send('providers:progress', { id: String(id), line })));
   handle('auth:account', () => auth.check());
-  handle('auth:signIn', () => auth.signIn());
+  handle('auth:signIn', async () => { const a = await auth.signIn(); agent.loadTabs(); return a; });
   handle('auth:cancel', () => auth.cancel());
-  handle('auth:signOut', () => auth.signOut());
+  handle('auth:signOut', async () => { const r = await auth.signOut(); agent.loadTabs(); return r; });
   handle('ext:status', () => extensions.status());
   handle('ext:install', (id, opts) => extensions.install(String(id), { token: String(opts?.token || '') }, line => send('ext:progress', { id: String(id), line })));
   handle('ext:uninstall', id => extensions.uninstall(String(id), line => send('ext:progress', { id: String(id), line })));
