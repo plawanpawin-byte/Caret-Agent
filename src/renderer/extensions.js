@@ -4,7 +4,7 @@ import { h, icon, toast } from './ui.js';
 import { api } from './state.js';
 
 const clean = e => String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-const CATS = ['All', 'MCP', 'Skills', 'Tools'];
+const CATS = ['All', 'MCP', 'GitHub'];
 const TINT = { 'github-mcp': ['#24292f', 'GH'], superpowers: ['#7c5cff', 'SP'], aislop: ['#16a34a', 'AS'], rea: ['#d9480f', 'RE'], 'roblox-studio': ['#e11d48', 'RB'] };
 
 export function createExtensions() {
@@ -57,7 +57,7 @@ export function createExtensions() {
     const [bg, txt] = TINT[id] || ['#444', '?'];
     // Real logos: GitHub's mark (white on black) and the Roblox Studio icon.
     if (id === 'roblox-studio') return h('img', { class: 'ext-ico', src: './roblox.png', alt: '', style: { width: size + 'px', height: size + 'px', background: 'none' } });
-    if (id === 'github-mcp') { const el = h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: '#000' } }, icon('github')); const sv = el.querySelector('svg'); if (sv) { sv.style.width = sv.style.height = Math.round(size * .62) + 'px'; sv.style.fill = '#fff'; } return el; }
+    if (['github-mcp', 'superpowers', 'aislop', 'rea'].includes(id)) { const el = h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: '#000' } }, icon('github')); const sv = el.querySelector('svg'); if (sv) { sv.style.width = sv.style.height = Math.round(size * .62) + 'px'; sv.style.fill = '#fff'; } return el; }
     return h('span', { class: 'ext-ico', style: { width: size + 'px', height: size + 'px', background: bg, fontSize: Math.round(size * .36) + 'px' }, text: txt });
   };
 

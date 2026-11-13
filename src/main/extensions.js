@@ -28,7 +28,7 @@ const CATALOG = [
     detect: s => s.mcp.has('github'),
   },
   {
-    id: 'superpowers', name: 'Superpowers', by: 'Jesse Vincent (obra)', category: 'Skills', repo: 'obra/superpowers', recommended: true,
+    id: 'superpowers', name: 'Superpowers', by: 'Jesse Vincent (obra)', category: 'GitHub', repo: 'obra/superpowers', recommended: true,
     summary: 'A development method for your agent: brainstorm, write a plan, then build it test-first with reviews.',
     about: [
       'Superpowers is a set of skills that make the AI work like a careful engineer. It asks what you really want, writes a design you can read in small pieces, turns it into a plan, and then builds it step by step with tests and reviews.',
@@ -38,7 +38,7 @@ const CATALOG = [
     detect: s => [...s.plugins].some(k => /^superpowers@/.test(k)),
   },
   {
-    id: 'aislop', name: 'aislop', by: 'scanaislop', category: 'Tools', repo: 'scanaislop/aislop', recommended: true,
+    id: 'aislop', name: 'aislop', by: 'scanaislop', category: 'GitHub', repo: 'scanaislop/aislop', recommended: true,
     summary: 'Catches the leftovers AI agents write: dead code, swallowed errors, unsafe casts, duplicated helpers.',
     about: [
       'aislop is a fast checker for the patterns coding agents leave behind. It scores a change from 0 to 100 and needs no AI to run, so the same code always gives the same score.',
@@ -49,7 +49,7 @@ const CATALOG = [
     detect: async () => !!cli.which('aislop'),
   },
   {
-    id: 'rea', name: 'REA: Reverse Engineer Anything', by: 'morluto', category: 'MCP', repo: 'morluto/rea', recommended: true,
+    id: 'rea', name: 'REA: Reverse Engineer Anything', by: 'morluto', category: 'GitHub', repo: 'morluto/rea', recommended: true,
     summary: 'Understand how an app works, from its behaviour down to the binary, and rebuild a similar feature.',
     about: [
       'REA gives the AI tools to inspect programs: native binaries, Electron and JavaScript apps, web pages and running processes. You describe a feature you like, and it gathers the evidence of how it works.',
