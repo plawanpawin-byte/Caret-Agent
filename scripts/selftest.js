@@ -334,6 +334,40 @@ async function t(name, fn) {
     assert.strictEqual(failedRun('ready\n[still running in the background at http://localhost:3000]'), false);
   });
 
+  await t('connectors: keys are checked before anything runs, go only into the right argument, and are never ours', async () => {
+    const prov = require('../src/main/providers');
+    const cli = require('../src/main/cli');
+    const extPath = require.resolve('../src/main/extensions');
+    const realStream = prov.stream, realClaude = cli.resolveCli, realNpm = cli.resolveNpm;
+    const calls = [];
+    prov.stream = async (cmd, args) => { calls.push(args); return { ok: true }; };
+    cli.resolveCli = () => ({ cmd: 'claude-stub', args: [], env: {} });
+    cli.resolveNpm = () => ({ cmd: 'npm-stub', args: [], env: {} });
+    delete require.cache[extPath];
+    try {
+      const ext = require(extPath);
+      const none = () => {};
+      await assert.rejects(() => ext.install('cloudflare', { token: 'short' }, none), /valid Cloudflare API token/);
+      await assert.rejects(() => ext.install('linear', { token: 'lin_api_' + 'a'.repeat(32) + '" & calc' }, none), /valid Linear API key/);
+      await assert.rejects(() => ext.install('supabase', { token: 'sbp_x' }, none), /valid Supabase access token/);
+      assert.strictEqual(calls.filter(a => a.includes('add')).length, 0, 'nothing ran for a bad key');
+      const tok = 'A'.repeat(40);
+      await ext.install('cloudflare', { token: tok }, none);
+      const add = calls.find(a => a.includes('add'));
+      assert.ok(add.includes('https://mcp.cloudflare.com/mcp') && add.includes('Authorization: Bearer ' + tok) && add.includes('http'), 'header carries the persons own key');
+      await ext.install('context7', {}, none);
+      assert.ok(calls.some(a => a.includes('add') && a.includes('@upstash/context7-mcp@4.7.0') && a.includes('--')), 'pinned package after --');
+      await ext.install('supabase', { token: 'sbp_' + 'b'.repeat(30) }, none);
+      assert.ok(calls.some(a => a.includes('-e') && a.some(x => x.startsWith('SUPABASE_ACCESS_TOKEN=sbp_'))), 'env key');
+      const st = JSON.stringify(await ext.status());
+      assert.ok(!/"http"|"local"|"re"|Bearer /.test(st), 'status hands the page no endpoints or patterns');
+      for (const e of ext.CATALOG) if (e.local) assert.match(e.local.pkg, /@\d+\.\d+\.\d+$/, e.id + ' is pinned to a version');
+    } finally {
+      prov.stream = realStream; cli.resolveCli = realClaude; cli.resolveNpm = realNpm;
+      delete require.cache[extPath];
+    }
+  });
+
   fs.rmSync(base, { recursive: true, force: true });
   console.log(`\n${pass} checks passed${process.exitCode ? ', some FAILED' : ''}`);
 })();

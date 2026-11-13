@@ -14,21 +14,36 @@
     "monaco-editor": "0.52.2"
   },
   "devDependencies": {
+    "@electron/fuses": "^1.8.0",
     "electron": "33.4.11",
     "electron-builder": "25.1.8"
   },
   "build": {
     "appId": "app.caretagent.desktop",
+    "afterPack": "scripts/fuses.js",
     "productName": "Caret Agent",
-    "directories": { "output": "dist" },
+    "directories": {
+      "output": "dist"
+    },
     "files": [
       "src/**/*",
       "resources/**/*",
       "node_modules/monaco-editor/min/**/*",
       "package.json"
     ],
-    "extraResources": [{ "from": "resources", "to": "resources" }],
-    "win": { "target": "nsis", "icon": "resources/icon.ico" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
