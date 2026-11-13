@@ -202,6 +202,7 @@ async function boot() {
   let chatRows = [];
   let overview = { none: [], projects: [] };
   const openProjects = new Set(store.get('openProjects', []));
+  const seenProjects = new Set();
   const chatBtn = (c, nested) => h('button', { class: 'ag-chat' + (nested ? ' nested' : '') + (c.active ? ' on' : ''), title: c.title, onclick: () => selectChat(c),
     oncontextmenu: e => { e.preventDefault(); menu(null, [
       { label: 'Rename', icon: 'edit', onClick: () => askText('Rename chat', c.title).then(t => t && chat.rename(c.id, t)) },
@@ -236,12 +237,14 @@ async function boot() {
     const plain = shape(overview.none, null);
     const blocks = overview.projects.map(p => {
       const chats = shape(p.chats, p.dir);
-      const open = p.dir === cur || openProjects.has(p.dir) || (q && chats.length);
+      // The project you are in opens itself the first time you land in it; after that the arrow is yours.
+      if (p.dir === cur && !seenProjects.has(cur)) { seenProjects.add(cur); openProjects.add(cur); }
+      const open = openProjects.has(p.dir) || (q && chats.length);
       const row = h('div', { class: 'ag-proj-row' },
         h('button', { class: 'ag-item' + (p.dir === cur ? ' on' : ''), title: p.dir,
-          onclick: async () => {
-            if (p.dir !== cur) { try { await openProject(p.dir); } catch {} openProjects.add(p.dir); }
-            else if (openProjects.has(p.dir)) openProjects.delete(p.dir); else openProjects.add(p.dir);
+          // Clicking the name only opens or closes the list. Switching project happens when you pick a chat or press +.
+          onclick: () => {
+            if (openProjects.has(p.dir)) openProjects.delete(p.dir); else openProjects.add(p.dir);
             store.set('openProjects', [...openProjects]); paintChats();
           } },
           icon(open ? 'folderOpen' : 'folder'), h('span', { class: 'grow', text: p.dir.split(/[\\/]/).pop() })),

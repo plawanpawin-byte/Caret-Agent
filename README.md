@@ -23,7 +23,7 @@ You only pay the AI companies directly for what you already use (your Claude or 
 
 ## Download
 
-1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.1.2.exe` (Windows, about 92 MB).
+1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.1.3.exe` (Windows, about 92 MB).
 2. Run it and follow the installer.
 3. Windows may show a blue "Windows protected your PC" box because the installer is not code-signed yet. Click **More info**, then **Run anyway**.
 
