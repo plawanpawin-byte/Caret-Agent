@@ -994,3 +994,8 @@ body.agent-layout .pp-list { display: block; }
 .ag-chat.nested { padding-left: 38px; }
 .ag-empty.nested { padding-left: 38px; }
 .ag-projects { overflow-y: auto; max-height: 55%; flex: none; }
+
+/* agent side bar: a row is highlighted only while the mouse is over it; the open one just reads brighter */
+.sessions .ag-item.on, .sessions .ag-chat.on { background: none; color: var(--text-hi); }
+.sessions .ag-item.on:hover, .sessions .ag-chat.on:hover { background: var(--hover); }
+.sessions .ag-chat.on { font-weight: 500; }
