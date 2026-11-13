@@ -24,6 +24,20 @@ function page(ok, text) {
 <p style="color:#9a9a9a;margin:0">${text}</p></div>`;
 }
 
+// A small copy of the GitHub avatar (png or jpeg, under 100 KB) as a data URL, or null.
+async function fetchAvatar(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' || u.hostname !== 'avatars.githubusercontent.com') return null;
+    u.searchParams.set('s', '96');
+    const r = await net.fetch(u.toString());
+    const type = String(r.headers.get('content-type') || '').split(';')[0];
+    if (!r.ok || !/^image\/(png|jpeg)$/.test(type)) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    return buf.length < 100000 ? `data:${type};base64,${buf.toString('base64')}` : null;
+  } catch { return null; }
+}
+
 function signIn() {
   if (pending) pending.cancel(new Error('A new sign-in was started.'));
   const verifier = b64u(crypto.randomBytes(32));
@@ -44,7 +58,7 @@ function signIn() {
         const r = await net.fetch(SITE + '/api/app/exchange', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, verifier }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || typeof j.token !== 'string' || typeof j.login !== 'string') { reply(400, page(false, 'The website did not accept the sign-in. Go back to the app and try again.')); return finish(new Error('The website did not accept the sign-in.')); }
-        settings.setAccount({ login: j.login, token: j.token });
+        settings.setAccount({ login: j.login, token: j.token, avatar: j.avatar ? await fetchAvatar(j.avatar) : null });
         reply(200, page(true, 'Caret Agent is ready. Taking you to your dashboard…'));
         finish(null, { login: j.login });
       } catch (e) { reply(500, page(false, 'Something went wrong. Go back to the app and try again.')); finish(new Error('Sign-in failed.')); }
@@ -76,6 +90,10 @@ async function check() {
   try {
     const r = await net.fetch(SITE + '/api/app/me', { headers: { authorization: 'Bearer ' + token } });
     if (r.status === 401) settings.clearAccount();
+    else if (r.ok && !settings.publicView().account?.avatar) {
+      const j = await r.json().catch(() => ({}));
+      if (j.avatar) settings.setAccountAvatar(await fetchAvatar(j.avatar));
+    }
   } catch {}
   return settings.publicView().account;
 }

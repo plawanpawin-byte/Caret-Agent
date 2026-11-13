@@ -211,10 +211,10 @@ async function t(name, fn) {
     const models = require('../src/main/models');
     const settings = require('../src/main/settings');
     const byId = Object.fromEntries(providers.CATALOG.map(p => [p.id, p]));
-    assert.deepStrictEqual(Object.keys(byId), ['claude', 'codex', 'xai', 'gemini']);
+    assert.deepStrictEqual(Object.keys(byId), ['claude', 'codex', 'xai', 'openrouter', 'gemini']);
     assert.ok(byId.claude.bin && byId.claude.apiId === 'anthropic', 'Claude: app and API');
     assert.ok(byId.codex.bin && byId.codex.apiId === 'openai', 'Codex: app and API');
-    assert.ok(!byId.xai.bin && !byId.gemini.bin, 'Grok and Antigravity are API only');
+    assert.ok(!byId.xai.bin && !byId.gemini.bin && !byId.openrouter.bin, 'Grok, OpenRouter and Antigravity are API only');
     for (const p of providers.CATALOG) assert.strictEqual(models.CLOUD_APIS[p.apiId].family, p.id, p.id + ' API points back to its family');
     assert.ok(settings.publicView().keysSet.anthropic === false || settings.publicView().keysSet.anthropic === true, 'an Anthropic key can be stored');
     const h = models.apiHeaders('anthropic', 'sk-ant-x');

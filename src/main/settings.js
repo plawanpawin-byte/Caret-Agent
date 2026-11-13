@@ -24,7 +24,7 @@ const DEFAULTS = {
   account: null,               // { login, token } of the GitHub sign-in; the token is encrypted
 };
 
-const ALLOWED_KEYS = new Set(['xai', 'gemini', 'openai', 'anthropic']);
+const ALLOWED_KEYS = new Set(['xai', 'gemini', 'openai', 'anthropic', 'openrouter']);
 
 let cache = null;
 const file = () => path.join(app.getPath('userData'), 'settings.json');
@@ -56,6 +56,7 @@ const PUBLIC_FIELDS = {
   mode: v => ['plan', 'code', 'agent'].includes(v),
   permission: v => ['ask', 'auto', 'full'].includes(v),
   model: v => typeof v === 'string' && v.length <= 200,
+  orModels: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === 'string' && /^[\w.\-:/]{1,120}$/.test(x)),   // OpenRouter models switched on
 };
 
 function publicView() {
@@ -64,7 +65,7 @@ function publicView() {
   for (const k of Object.keys(PUBLIC_FIELDS)) out[k] = s[k];
   out.recentFolders = s.recentFolders;
   out.lastFolder = s.lastFolder;
-  out.account = s.account && s.account.login ? { login: s.account.login } : null;
+  out.account = s.account && s.account.login ? { login: s.account.login, avatar: s.account.avatar || null } : null;
   out.keysSet = Object.fromEntries([...ALLOWED_KEYS].map(k => [k, !!s.keys[k]]));
   return out;
 }
@@ -94,11 +95,12 @@ function getKey(provider) {
   try { return safeStorage.decryptString(Buffer.from(enc, 'base64')); } catch { return null; }
 }
 
-function setAccount({ login, token }) {
+const AVATAR_OK = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]{20,150000}$/;
+function setAccount({ login, token, avatar }) {
   if (typeof login !== 'string' || typeof token !== 'string' || !login || token.length > 200) throw new Error('Invalid account');
   if (!safeStorage.isEncryptionAvailable()) throw new Error('This system has no secure storage, so the sign-in cannot be saved.');
   const s = load();
-  s.account = { login: login.slice(0, 80), token: safeStorage.encryptString(token).toString('base64') };
+  s.account = { login: login.slice(0, 80), token: safeStorage.encryptString(token).toString('base64'), avatar: AVATAR_OK.test(avatar || '') ? avatar : null };
   save();
 }
 function getAccountToken() {
@@ -106,6 +108,7 @@ function getAccountToken() {
   if (!enc) return null;
   try { return safeStorage.decryptString(Buffer.from(enc, 'base64')); } catch { return null; }
 }
+function setAccountAvatar(avatar) { const s = load(); if (s.account && AVATAR_OK.test(avatar || '')) { s.account.avatar = avatar; save(); } }
 function clearAccount() { const s = load(); s.account = null; save(); }
 
 function addRecentFolder(dir) {
@@ -115,4 +118,4 @@ function addRecentFolder(dir) {
   save();
 }
 
-module.exports = { load, update, publicView, setKey, getKey, addRecentFolder, setAccount, getAccountToken, clearAccount };
+module.exports = { load, update, publicView, setKey, getKey, addRecentFolder, setAccount, setAccountAvatar, getAccountToken, clearAccount };

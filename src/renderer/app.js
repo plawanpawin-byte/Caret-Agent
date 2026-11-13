@@ -4,7 +4,7 @@ import { createExplorer } from './explorer.js';
 import { createEditorArea } from './editor.js';
 import { createTerminalPanel } from './terminal.js';
 import { createChat } from './chat.js';
-import { onboarding, openSettings, cloneDialog, loginGate } from './dialogs.js';
+import { onboarding, openSettings, cloneDialog, loginGate, avatarEl } from './dialogs.js';
 import { createPalette } from './palette.js';
 import { createProviders } from './providers.js';
 import { createExtensions } from './extensions.js';
@@ -170,7 +170,14 @@ async function boot() {
   const chatFilter = h('input', { class: 'ag-filter hidden', placeholder: 'Search chats', spellcheck: 'false' });
   const sessionList = h('div', { class: 'ag-chats' });
   const projList = h('div', { class: 'ag-projects' });
-  const agModel = h('button', { class: 'ag-ai', title: 'Models and API keys', onclick: () => providersPanel.openList() });
+  // The bottom-left button is the person's profile (GitHub name and picture); it opens a small account menu.
+  const agModel = h('button', { class: 'ag-ai ag-profile', title: 'Account', onclick: () => accountMenu() });
+  const accountMenu = () => menu(agModel, [
+    { label: 'Settings', icon: 'settings', key: 'Ctrl+,', onClick: () => openSettings() },
+    { label: 'Models and API keys', icon: 'key', key: 'Ctrl+Shift+X', onClick: () => providersPanel.openList() },
+    { label: 'Extensions', icon: 'extensions', onClick: () => extPanel.open() },
+    'sep',
+    { label: 'Log out', icon: 'x', onClick: async () => { await api.auth.signOut(); location.reload(); } }], { above: true });
   $('sessions').append(
     h('div', { class: 'ag-nav' },
       h('button', { class: 'ag-item strong', onclick: () => newTask() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
@@ -271,11 +278,8 @@ async function boot() {
   function paintProjects() { paintSide(); }
   function paintAi() {
     const s = state.settings;
-    const auto = !s.model || s.model === 'auto';
-    const key = auto ? state.catalog?.auto?.key : s.model;
-    const label = auto ? (key ? `Auto · ${modelLabel(key).split(" (")[0]}` : state.catalog ? 'No AI set up' : 'Auto') : modelLabel(s.model);
-    agModel.title = auto && state.catalog?.auto?.reason ? state.catalog.auto.reason : 'Models and API keys';
-    agModel.replaceChildren(h('i', { class: 'dot ' + (key ? 'ok' : 'off') }), h('span', { class: 'grow', text: label }), icon('down'));
+    const nm = s.account?.login || s.name || 'Profile';
+    agModel.replaceChildren(avatarEl(26), h('span', { class: 'grow', text: nm }), icon('down'));
   }
   on('settings', paintAi); on('catalog', paintAi); paintAi();
   getCatalog().catch(() => {});

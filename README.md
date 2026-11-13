@@ -23,7 +23,7 @@ You only pay the AI companies directly for what you already use (your Claude or 
 
 ## Download
 
-1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.2.2.exe` (Windows, about 92 MB).
+1. Go to the [**latest release**](https://github.com/plawanpawin-byte/Caret-Agent/releases/latest) and download `Caret Agent Setup 0.3.0.exe` (Windows, about 92 MB).
 2. Run it and follow the installer.
 3. Windows may show a blue "Windows protected your PC" box because the installer is not code-signed yet. Click **More info**, then **Run anyway**.
 
@@ -54,6 +54,10 @@ Open **Extensions** (in the Agent side bar, the menu, or the command palette) to
 - **aislop**: catches the leftovers AI agents write (dead code, swallowed errors).
 - **REA**: reverse engineer how an app works.
 - **Roblox Studio** MCP: build and edit a Roblox game from the chat (needs Roblox Studio).
+
+## Settings and models
+
+Click your name at the bottom left to open Settings (Account, Model, Customize) or log out. The **Model** page lists 50 featured models from OpenRouter with a switch on each; the ones you turn on appear in the model menu, and one OpenRouter key runs all of them. Search to add any other OpenRouter model.
 
 ## Task lists
 

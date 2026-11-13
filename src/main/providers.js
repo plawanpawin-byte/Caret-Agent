@@ -17,6 +17,7 @@ const CATALOG = [
     bin: 'codex', pkg: '@openai/codex', login: ['login'], statusArgs: ['login', 'status'], site: 'https://developers.openai.com/codex',
     apiId: 'openai', keyUrl: 'https://platform.openai.com/api-keys', keyHint: 'sk-…' },
   { id: 'xai', name: 'Grok', by: 'xAI', blurb: 'Grok models with an xAI API key.', apiId: 'xai', keyUrl: 'https://console.x.ai', keyHint: 'xai-…' },
+  { id: 'openrouter', name: 'OpenRouter', by: 'OpenRouter', blurb: 'Hundreds of models with one key. Switch on the ones you want in Settings, Model.', apiId: 'openrouter', keyUrl: 'https://openrouter.ai/keys', keyHint: 'sk-or-…' },
   { id: 'gemini', name: 'Antigravity', by: 'Google', blurb: 'Gemini models with a Google AI Studio key.', apiId: 'gemini', keyUrl: 'https://aistudio.google.com/apikey', keyHint: 'AIza…' },
 ];
 

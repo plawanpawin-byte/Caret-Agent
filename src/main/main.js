@@ -237,6 +237,7 @@ function registerIpc() {
   handle('term:kill', id => terminals.kill(id));
   handle('term:close', id => terminals.close(id));
 
+  handle('models:openrouter', async () => { const c = await models.openrouterCatalog(); return { featured: c.featured, all: c.all, enabled: await models.openrouterEnabled() }; });
   handle('providers:status', () => providers.status());
   handle('providers:install', id => providers.install(String(id), line => send('providers:progress', { id: String(id), line })).then(() => { models.catalog().catch(() => {}); return true; }));
   handle('providers:signIn', id => providers.signIn(String(id), line => send('providers:progress', { id: String(id), line })));

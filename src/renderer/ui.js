@@ -42,6 +42,7 @@ const P = {
   shield: '<path d="M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z"/>',
   shieldCheck: '<path d="M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
   bolt: '<path d="M13 3 4 14h7l-1 7 9-11h-7z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>',
   extensions: '<rect x="3" y="12" width="8" height="8" rx="1.2"/><rect x="12" y="12" width="8" height="8" rx="1.2"/><rect x="3" y="4" width="8" height="8" rx="1.2"/><rect x="14" y="2.5" width="6.5" height="6.5" rx="1.2"/>',
   download: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l3 3M14 9l2 2"/>',

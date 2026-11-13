@@ -1,7 +1,7 @@
 {
   "name": "caret-agent",
   "productName": "Caret Agent",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "A free AI IDE that remembers your work across every model — Claude, Codex, Grok, Gemini and the local models already on your machine.",
   "main": "src/main/main.js",
   "private": true,

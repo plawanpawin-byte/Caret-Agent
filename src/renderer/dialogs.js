@@ -143,46 +143,119 @@ function renderModels(list, cat, onSetup) {
   list.replaceChildren(...rows);
 }
 
+// A round profile picture: the GitHub avatar when we have it, otherwise the first letter of the name.
+export function avatarEl(size = 28) {
+  const a = state.settings?.account;
+  const nm = a?.login || state.settings?.name || '?';
+  const el = a?.avatar ? h('img', { class: 'avatar', src: a.avatar, alt: '' }) : h('span', { class: 'avatar ph', text: nm.slice(0, 1).toUpperCase() });
+  el.style.width = el.style.height = size + 'px';
+  if (!a?.avatar) el.style.fontSize = Math.round(size * .45) + 'px';
+  return el;
+}
+
+// Settings: a list of sections on the left, the chosen one on the right.
 export function openSettings(section) {
-  const box = h('div', { class: 'modal' });
+  const box = h('div', { class: 'modal settings' });
   const o = overlay(box);
-  const s = state.settings;
+  let page = section === 'models' || section === 'model' ? 'model' : section === 'customize' ? 'customize' : 'account';
+  const content = h('div', { class: 'set-content' });
+  const SECTIONS = [['account', 'Account', 'user'], ['model', 'Model', 'sparkle'], ['customize', 'Customize', 'wand']];
+  const navBtns = {};
+  const nav = h('nav', { class: 'set-nav' });
+  const row = (label, hint, control) => h('div', { class: 'set-row' }, h('div', { class: 'set-l' }, h('div', { text: label }), hint ? h('small', { text: hint }) : null), h('div', { class: 'set-r' }, control));
 
-  const name = h('input', { class: 'field', value: s.name || '', maxlength: 60 });
-  const role = h('select', { class: 'field' }, ...ROLES.map(([t]) => h('option', { value: t, selected: s.role === t }, t)));
-  const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'IDE (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (desktop agent)'));
+  // ----- Account -----
+  function account() {
+    const s = state.settings;
+    const name = h('input', { class: 'field', value: s.name || '', maxlength: 60 });
+    const role = h('select', { class: 'field' }, ...ROLES.map(([t]) => h('option', { value: t, selected: s.role === t }, t)));
+    const layout = h('select', { class: 'field' }, h('option', { value: 'studio', selected: s.layout === 'studio' }, 'IDE (code editor)'), h('option', { value: 'agent', selected: s.layout === 'agent' }, 'Agent (desktop agent)'));
+    const save = h('button', { class: 'btn primary', text: 'Save', onclick: async () => {
+      await saveSettings({ name: name.value.trim(), role: role.value, layout: layout.value });
+      emit('cmd', { layout: layout.value });
+      toast('Saved');
+    } });
+    return [
+      h('h2', { text: 'Profile' }),
+      row('Profile photo', 'Your GitHub picture', avatarEl(44)),
+      row('GitHub account', 'You signed in with this', h('span', { class: 'set-val', text: s.account?.login || 'Not signed in' })),
+      row('Full name', null, name),
+      row('What best describes your work?', null, role),
+      row('Default view', 'Which layout opens first', layout),
+      h('div', { class: 'set-actions' }, save,
+        s.account ? h('button', { class: 'btn ghost', text: 'Log out', onclick: async () => { o.remove(); await api.auth.signOut(); location.reload(); } }) : null),
+    ];
+  }
 
-  const body = h('div', { class: 'modal-body' },
-    h('div', { class: 'section-title', text: 'You' }),
-    h('div', { class: 'setting' }, h('div', { class: 'l', text: 'Name' }), name),
-    h('div', { class: 'setting' }, h('div', { class: 'l', text: 'Role' }), role),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Default view', h('small', { text: 'Which layout opens first' })), layout),
-    h('div', { class: 'section-title', id: 'models-section', text: 'AI' }),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Models and API keys', h('small', { text: 'App or API key' })),
-      h('div', {},
-        h('div', { class: 'ai-row' }, ...['claude', 'codex', 'xai', 'gemini'].map(id => brand(id, 28))),
-        h('div', { class: 'muted', style: { margin: '8px 0' }, text: 'Claude and Codex can run as an app on this computer or through an API key. Grok and Antigravity use an API key. Keys are kept encrypted on this computer, and all of it is set up in one place.' }),
-        h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('key'), 'Open models and API keys'))),
-    h('div', { class: 'section-title', text: 'Project' }),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Design guide', h('small', { text: '.caret/DESIGN.md' })),
-      h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Every AI reads this before building an interface — colours, spacing, what to avoid. Edit it to match your taste.' }),
+  // ----- Model: 50 OpenRouter models, each with a switch. Switched-on ones appear in the model menu. -----
+  function model() {
+    const list = h('div', { class: 'mdl-list' });
+    const search = h('input', { class: 'mdl-search', placeholder: 'Add or search model', spellcheck: 'false' });
+    const note = h('div', { class: 'muted mdl-note' });
+    let data = null, enabled = new Set();
+    const keyOn = () => !!state.settings.keysSet?.openrouter;
+
+    async function persist() {
+      await saveSettings({ orModels: [...enabled] });
+      refreshCatalog({ mode: state.settings.mode }).catch(() => {});
+    }
+    function draw() {
+      if (!data) return;
+      const q = search.value.trim().toLowerCase();
+      const byId = new Map([...data.featured, ...data.all].map(m => [m.id, m]));
+      for (const id of enabled) if (!byId.has(id)) byId.set(id, { id, name: id });
+      let rows;
+      if (q) rows = [...byId.values()].filter(m => (m.name + ' ' + m.id).toLowerCase().includes(q)).slice(0, 60);
+      else rows = [...data.featured, ...[...enabled].filter(id => !data.featured.some(f => f.id === id)).map(id => byId.get(id))];
+      const els = rows.map(m => h('label', { class: 'mdl-row' },
+        h('span', { class: 'mdl-name', title: m.id }, m.name.replace(/^[^:]+:\s*/, ''), h('small', { text: m.id })),
+        h('span', { class: 'switch' + (enabled.has(m.id) ? ' on' : '') }, h('input', { type: 'checkbox', checked: enabled.has(m.id), onchange: e => { e.target.checked ? enabled.add(m.id) : enabled.delete(m.id); e.target.parentNode.classList.toggle('on', e.target.checked); persist(); } }), h('i'))));
+      if (q && /^[\w.-]+\/[\w.:-]+$/.test(search.value.trim()) && !byId.has(search.value.trim())) {
+        const id = search.value.trim();
+        els.unshift(h('button', { class: 'mdl-add', onclick: () => { enabled.add(id); persist(); search.value = ''; draw(); } }, icon('plus'), `Add ${id}`));
+      }
+      list.replaceChildren(...(els.length ? els : [h('div', { class: 'muted', style: { padding: '14px 4px' }, text: 'No model matches.' })]));
+      note.replaceChildren(keyOn() ? h('span', { text: `${enabled.size} model${enabled.size === 1 ? '' : 's'} on. They appear in the model menu.` })
+        : h('span', {}, 'These run through OpenRouter. ', h('button', { class: 'link', text: 'Add your OpenRouter key', onclick: () => { o.remove(); emit('cmd', { providers: 'openrouter' }); } }), ' to use them.'));
+    }
+    async function load(force) {
+      list.replaceChildren(h('div', { class: 'muted', style: { padding: '14px 4px' }, text: 'Loading models…' }));
+      try { data = await api.models.openrouter(); enabled = new Set(data.enabled); draw(); }
+      catch { list.replaceChildren(h('div', { class: 'muted', style: { padding: '14px 4px' }, text: 'Could not load the model list. Check your internet connection.' })); }
+    }
+    search.oninput = draw;
+    load();
+    return [
+      h('h2', { text: 'Model' }),
+      h('p', { class: 'muted set-lead', text: 'Choose which OpenRouter models show up in the model menu. One key gives you all of them. Claude and Codex run on your own sign-in, and Grok and Gemini use their own keys, all set up under "Models and API keys".' }),
+      h('div', { class: 'mdl-bar' }, search, h('button', { class: 'icon-btn', title: 'Refresh', onclick: () => load(true) }, icon('refresh'))),
+      list, note,
+      h('div', { class: 'set-actions' }, h('button', { class: 'btn', onclick: () => { o.remove(); emit('cmd', 'providers'); } }, icon('key'), 'Models and API keys')),
+    ];
+  }
+
+  // ----- Customize -----
+  function customize() {
+    return [
+      h('h2', { text: 'Customize' }),
+      row('Design guide', '.caret/DESIGN.md', h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Every AI reads this before building an interface: colours, spacing, what to avoid. Edit it to match your taste.' }),
         h('button', { class: 'btn', disabled: !state.workspace, onclick: () => { o.remove(); emit('open-file', '.caret/DESIGN.md'); } }, 'Edit design guide'))),
-    h('div', { class: 'setting' }, h('div', { class: 'l' }, 'Project memory', h('small', { text: '.caret/HANDOFF.md' })),
-      h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Where AIs record progress so a different AI can continue the work.' }),
+      row('Project memory', '.caret/HANDOFF.md', h('div', {}, h('div', { class: 'muted', style: { marginBottom: '8px' }, text: 'Where AIs record progress so a different AI can continue the work.' }),
         h('button', { class: 'btn', disabled: !state.workspace, onclick: () => { o.remove(); emit('open-file', '.caret/HANDOFF.md'); } }, 'Open project memory'))),
-    h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '16px' }, text: `Caret Agent ${state.info?.version || ''} · free and open source` }));
+      h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '18px' }, text: `Caret Agent ${state.info?.version || ''} · free and open source` }),
+    ];
+  }
 
-  box.append(
-    h('div', { class: 'modal-head' }, icon('settings'), h('h2', { text: 'Settings' }), h('button', { class: 'icon-btn', onclick: () => o.remove() }, icon('x'))),
-    body,
-    h('div', { class: 'modal-foot' },
-      h('button', { class: 'btn ghost', onclick: () => o.remove() }, 'Cancel'),
-      h('button', { class: 'btn primary', onclick: async () => {
-        await saveSettings({ name: name.value.trim(), role: role.value, layout: layout.value });
-        emit('cmd', { layout: layout.value });
-        o.remove();
-      } }, 'Save')));
-  if (section === 'models') setTimeout(() => body.querySelector('#models-section')?.scrollIntoView());
+  function show(p) {
+    page = p;
+    for (const [id, btn] of Object.entries(navBtns)) btn.classList.toggle('on', id === p);
+    content.replaceChildren(...(p === 'model' ? model() : p === 'customize' ? customize() : account()));
+    content.scrollTop = 0;
+  }
+  for (const [id, label, ic] of SECTIONS) { navBtns[id] = h('button', { class: 'set-nav-item', onclick: () => show(id) }, icon(ic), label); nav.append(navBtns[id]); }
+  box.append(h('div', { class: 'set-head' }, h('h1', { text: 'Settings' }), h('button', { class: 'icon-btn', title: 'Close', onclick: () => o.remove() }, icon('x'))),
+    h('div', { class: 'set-body' }, nav, content));
+  show(page);
 }
 
 export function cloneDialog() {

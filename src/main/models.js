@@ -122,12 +122,50 @@ const CLOUD_APIS = {
   openai: { name: 'OpenAI API', family: 'codex', base: 'https://api.openai.com/v1', filter: id => /^(gpt-|o\d|chatgpt)/i.test(id) && !/audio|realtime|image|tts|transcribe|search|instruct/i.test(id) },
   xai: { name: 'Grok', family: 'xai', base: 'https://api.x.ai/v1', filter: id => /grok/i.test(id) && !/image|imagine|vision-beta/i.test(id) },
   gemini: { name: 'Antigravity (Gemini)', family: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', filter: id => /^gemini-(3\.7|3\.8|4[-.]?argon|4[-.]?carbon)/i.test(id) && !/embed|image|tts|audio|live/i.test(id) },
+  openrouter: { name: 'OpenRouter', family: 'openrouter', base: 'https://openrouter.ai/api/v1', filter: () => true,
+    headers: key => ({ authorization: `Bearer ${key}`, 'x-title': 'Caret Agent' }) },
 };
 const apiHeaders = (provider, key) => (CLOUD_APIS[provider].headers ? CLOUD_APIS[provider].headers(key) : { authorization: `Bearer ${key}` });
+
+// ---------- OpenRouter ----------
+// OpenRouter has hundreds of models behind one key. The list is public (no key needed). 50 well-known, recent ones are
+// featured; the person switches on the ones they want, and only those appear in the model menu.
+const OR_VENDORS = ['anthropic', 'openai', 'google', 'x-ai', 'deepseek', 'meta-llama', 'mistralai', 'qwen', 'moonshotai', 'z-ai', 'cohere', 'nvidia', 'perplexity', 'amazon', 'microsoft', 'minimax'];
+let orCache = null;
+async function openrouterCatalog() {
+  if (orCache && Date.now() - orCache.at < 60 * 60 * 1000) return orCache.value;
+  const j = await getJson(CLOUD_APIS.openrouter.base + '/models', { timeout: 10000 });
+  const all = (j.data || [])
+    .filter(m => m && typeof m.id === 'string' && /^[\w.\-:/]{1,120}$/.test(m.id))
+    .filter(m => !m.architecture || (Array.isArray(m.architecture.output_modalities) ? m.architecture.output_modalities.includes('text') && m.architecture.output_modalities.length === 1 : true))
+    .filter(m => !/embed|moderation|guard|safety|:extended$|:online$|:nitro$|:floor$|:batch$/i.test(m.id))
+    .map(m => ({ id: m.id, name: String(m.name || m.id).slice(0, 80), created: Number(m.created) || 0, ctx: Number(m.context_length) || 0,
+      free: m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0 }));
+  // Newest first, from the well-known makers, at most 4 per maker so one company cannot fill the list.
+  const per = new Map();
+  const featured = all.filter(m => OR_VENDORS.includes(m.id.split('/')[0]) && !m.free)
+    .sort((a, b) => b.created - a.created)
+    .filter(m => { const v = m.id.split('/')[0]; const n = per.get(v) || 0; if (n >= 4) return false; per.set(v, n + 1); return true; })
+    .slice(0, 50);
+  const value = { featured, all: all.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 600) };
+  orCache = { at: Date.now(), value };
+  return value;
+}
+const DEFAULT_OR_ON = 6;
+async function openrouterEnabled() {
+  const saved = settings.load().orModels;
+  if (Array.isArray(saved)) return saved;
+  try { return (await openrouterCatalog()).featured.slice(0, DEFAULT_OR_ON).map(m => m.id); } catch { return []; }
+}
 
 async function cloudApiModels(provider) {
   const key = settings.getKey(provider);
   if (!key) return null;
+  if (provider === 'openrouter') {
+    let names = new Map();
+    try { for (const m of (await openrouterCatalog()).all) names.set(m.id, m.name); } catch {}
+    return (await openrouterEnabled()).map(id => ({ id, label: names.get(id) || id }));
+  }
   const cfg = CLOUD_APIS[provider];
   try {
     const j = await getJson(cfg.base + '/models' + (provider === 'anthropic' ? '?limit=100' : ''), { headers: apiHeaders(provider, key), timeout: 6000 });
@@ -202,7 +240,7 @@ async function catalog({ mode = 'code', needVision = false } = {}) {
     if (list === null) continue;
     const base = { id: p, family: CLOUD_APIS[p].family, method: 'api', name: CLOUD_APIS[p].name, kind: 'api' };
     if (list.error) providers.push({ ...base, error: list.error, models: [] });
-    else providers.push({ ...base, models: list.map(id => ({ id, key: `${p}:${id}`, tools: true, vision: true })) });
+    else providers.push({ ...base, models: list.map(m => typeof m === 'string' ? { id: m, key: `${p}:${m}`, tools: true, vision: true } : { id: m.id, label: m.label, key: `${p}:${m.id}`, tools: true, vision: true }) });
   }
 
   const auto = pickAuto(providers, mode, needVision);
@@ -221,4 +259,4 @@ function pickAuto(providers, mode, needVision) {
   return { key: null, reason: 'No AI is set up yet. Open the model menu to set up Claude, Codex, Grok or Antigravity.' };
 }
 
-module.exports = { catalog, hardware, ensureOllama, CLOUD_APIS, apiHeaders, OLLAMA, getJson };
+module.exports = { catalog, hardware, ensureOllama, CLOUD_APIS, apiHeaders, OLLAMA, getJson, openrouterCatalog, openrouterEnabled };
