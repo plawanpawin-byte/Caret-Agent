@@ -38,7 +38,9 @@ async function fetchAvatar(url) {
   } catch { return null; }
 }
 
-function signIn() {
+// grant = true: the person is already signed in and now lets the app use their GitHub access (for the GitHub
+// extension). The GitHub token goes back to the caller in memory only; it is not saved by this module.
+function signIn(grant = false) {
   if (pending) pending.cancel(new Error('A new sign-in was started.'));
   const verifier = b64u(crypto.randomBytes(32));
   const state = b64u(crypto.randomBytes(32));
@@ -57,6 +59,13 @@ function signIn() {
         const code = u.searchParams.get('code') || '';
         const r = await net.fetch(SITE + '/api/app/exchange', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, verifier }) });
         const j = await r.json().catch(() => ({}));
+        if (grant) {
+          const mine = settings.publicView().account?.login || '';
+          if (!r.ok || typeof j.githubToken !== 'string' || !/^[A-Za-z0-9_\-.]{20,255}$/.test(j.githubToken)) { reply(400, page(false, 'GitHub access was not given. Go back to the app and try again.')); return finish(new Error('GitHub access was not given.')); }
+          if (String(j.login || '').toLowerCase() !== mine.toLowerCase()) { reply(400, page(false, 'You approved a different GitHub account. Use the same account you signed in to Caret Agent with.')); return finish(new Error('That was a different GitHub account than the one you are signed in with.')); }
+          reply(200, page(true, 'GitHub is connected. You can close this tab and go back to Caret Agent.').replace(/<meta http-equiv[^>]*>/, ''));
+          return finish(null, { githubToken: j.githubToken });
+        }
         if (!r.ok || typeof j.token !== 'string' || typeof j.login !== 'string') { reply(400, page(false, 'The website did not accept the sign-in. Go back to the app and try again.')); return finish(new Error('The website did not accept the sign-in.')); }
         settings.setAccount({ login: j.login, token: j.token, avatar: j.avatar ? await fetchAvatar(j.avatar) : null });
         reply(200, page(true, 'Caret Agent is ready. Taking you to your dashboard…'));
@@ -75,7 +84,7 @@ function signIn() {
     server.listen(0, '127.0.0.1', () => {
       port = server.address().port;
       timer = setTimeout(() => finish(new Error('Sign-in timed out. Try again.')), WAIT_MS);
-      const url = `${SITE}/auth/app?port=${port}&state=${state}&challenge=${challenge}`;
+      const url = grant ? `${SITE}/auth/app/github?port=${port}&state=${state}&challenge=${challenge}&grant=github` : `${SITE}/auth/app?port=${port}&state=${state}&challenge=${challenge}`;
       shell.openExternal(url).catch(() => finish(new Error('Could not open the browser.')));
     });
   });
@@ -105,4 +114,6 @@ async function signOut() {
   return true;
 }
 
-module.exports = { signIn, cancel, check, signOut, SITE };
+const grantGithub = () => signIn(true);
+
+module.exports = { grantGithub, signIn, cancel, check, signOut, SITE };

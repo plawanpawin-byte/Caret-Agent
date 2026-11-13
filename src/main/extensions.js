@@ -21,10 +21,10 @@ const CATALOG = [
     summary: 'Let the AI read repositories, open issues and pull requests, and check Actions runs.',
     about: [
       'The official GitHub MCP server. It connects the AI to GitHub so it can browse code, search files, create and update issues and pull requests, and look at workflow runs, without you copying anything by hand.',
-      'It needs a GitHub personal access token. Create one at GitHub, Settings, Developer settings, Personal access tokens, and give it only the permissions you want the AI to have (for example repo and read:org). Caret Agent passes the token to Claude Code, which keeps it in its own settings file on this computer.',
+      'It uses the GitHub account you signed in to Caret Agent with. Press Install, allow access on the GitHub page that opens (repo and read:org), and you are done: no token to create or paste. Caret Agent passes the access to Claude Code, which keeps it in its own settings file on this computer. Uninstall removes it.',
     ],
     features: ['Browse and search code in any repository you can see', 'Create and update issues and pull requests', 'Read GitHub Actions runs and logs', 'Hosted by GitHub, nothing to run locally'],
-    needsToken: true,
+    needsToken: false, // uses the GitHub sign-in; a pasted token is still accepted
     detect: s => s.mcp.has('github'),
   },
   {
@@ -131,7 +131,12 @@ async function install(id, opts, onLine) {
     let r;
     const step = async (res, fail) => { if (!res.ok) throw new Error(fail || res.error || 'The install failed.'); };
     if (id === 'github-mcp') {
-      const token = String(opts?.token || '').trim();
+      let token = String(opts?.token || '').trim();
+      if (!token) { // no pasted token: use the GitHub account the person signed in with (they approve it on the website)
+        if (!require('./settings').publicView().account) throw new Error('Sign in to Caret Agent first.');
+        onLine('Waiting for you to allow GitHub access in the browser…');
+        token = (await require('./auth').grantGithub()).githubToken;
+      }
       if (!TOKEN_OK.test(token)) throw new Error('That does not look like a GitHub token. Paste the whole token, with no spaces.');
       onLine('claude mcp add github');
       await run(runClaude(['mcp', 'remove', '--scope', 'user', 'github'], () => {}), true);
