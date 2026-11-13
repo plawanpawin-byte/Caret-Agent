@@ -148,7 +148,8 @@ async function boot() {
     { label: 'Settings', icon: 'settings', key: 'Ctrl+,', onClick: () => openSettings() },
   ]) }, icon('down'));
   // One row of tools at the top of the side panel (no separate left rail).
-  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search, h('span', { class: 'grow' }), actMore);
+  const toolRow = h('div', { class: 'toolrow' }, activityItems.explorer, activityItems.search,
+    h('button', { class: 'icon-btn', title: 'Extensions', onclick: () => extPanel.open() }, icon('extensions')), h('span', { class: 'grow' }), actMore);
   $('sidebar').append(toolRow, explorer.el, search.el);
   $('editor-area').append(editorArea.el);
   $('bottom').append(terminal.el);
