@@ -28,7 +28,7 @@ export function createChat() {
   const tabStrip = h('div', { class: 'chat-tabs' });
   const transcript = h('div', { class: 'transcript' });
   const welcome = h('div', { class: 'welcome hidden' });
-  const textarea = h('textarea', { rows: 1, placeholder: 'Ask anything (Ctrl+L), @ to mention' });
+  const textarea = h('textarea', { rows: 1, placeholder: 'Ask anything, @ to mention, / for actions' });
   const attachEl = h('div', { class: 'attachments' });
   const fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hidden' });
   const permBtn = h('button', { class: 'pill ico', title: 'Permissions' });
@@ -40,6 +40,7 @@ export function createChat() {
   const plusBtn = h('button', { class: 'ctx-plus', title: 'Add context' }, icon('plus'));
   const composer = h('div', { class: 'composer' }, attachEl, textarea,
     h('div', { class: 'composer-row' }, modeBtn, modelBtn, h('span', { class: 'grow' }), ctxBtn, attachBtn, permBtn, sendBtn), fileInput);
+  const projRow = h('div', { class: 'cmp-proj' });
   const composerWrap = h('div', { class: 'composer-wrap' }, composer);
   // panel header: a title and the chat actions
   const subHead = h('div', { class: 'chat-head' }, h('span', { class: 'chat-title', text: 'AI' }), h('span', { class: 'grow' }),
@@ -274,21 +275,22 @@ export function createChat() {
       welcome.classList.toggle('hidden', !empty);
       transcript.classList.toggle('hidden', empty);
       if (empty) {
-        const name = state.settings?.name ? state.settings.name.split(' ')[0] : '';
+        const name = (state.settings?.account?.login || state.settings?.name || '').split(' ')[0];
         const inner = h('div', { class: 'welcome-inner' },
-          h('div', { class: 'ag-hello' }, logo(30), h('h1', { text: name ? `What should we build, ${name}?` : 'What should we build?' })));
-        inner.append(h('div', { class: 'ctx-row' },
-          h('button', { class: 'ctx-chip', title: 'Folder the AI works in', onclick: () => emit('cmd', 'open-folder') }, icon('folder'), h('span', { text: state.workspace ? state.workspace.name : 'Choose a project' }), icon('down')),
-          h('span', { class: 'ctx-sep' }),
-          h('span', { class: 'ctx-note' }, icon('laptop'), 'Runs on this PC')));
+          h('div', { class: 'ag-hello' }, logo(200), h('h1', { text: name ? `Hey ${name}, what should we build today?` : 'What should we build today?' })));
+        // The folder picker sits on top of the prompt box, like "No Project" in a desktop agent.
+        projRow.replaceChildren(h('button', { class: 'ctx-chip', title: 'Folder the AI works in', onclick: () => emit('cmd', 'open-folder') },
+          h('span', { text: state.workspace ? state.workspace.name : 'No Project' }), icon('down')));
+        composer.prepend(projRow);
         inner.append(composerWrap);
-        inner.append(starters());
         welcome.replaceChildren(inner);
         return;
       }
+      projRow.remove();
       if (composerWrap.parentElement !== el) el.append(composerWrap);
     } else {
       welcome.classList.add('hidden');
+      projRow.remove();
       transcript.classList.remove('hidden');
       if (composerWrap.parentElement !== el) el.append(composerWrap);
     }
@@ -583,7 +585,7 @@ export function createChat() {
   function setVariant(v) {
     variant = v;
     subHead.classList.toggle('hidden', v === 'center');
-    textarea.placeholder = v === 'center' ? 'Describe a task. @ to mention a file, paste a screenshot' : 'Ask anything (Ctrl+L), @ to mention';
+    textarea.placeholder = v === 'center' ? 'Ask anything, @ to mention, / for actions' : 'Ask anything (Ctrl+L), @ to mention';
     if (v === 'center') el.classList.remove('empty-chat');
     renderTabs(); renderAll();
   }

@@ -112,17 +112,12 @@ async function boot() {
     next.click();
   }, true);
   const palette = createPalette({ setLayout: l => setLayout(l), openSettings: () => openSettings(), checkUpdate: () => checkUpdate() });
+  // The IDE title bar (view switch, File/Edit/View menus, command box) is parked with the IDE; see backup/ide-ui.
   $('titlebar').append(
-    h('div', { class: 'brand', title: 'Caret Agent' }, logo(24)),
-    viewBtn, menubar,
-    h('div', { class: 'spacer' }),
-    h('div', { class: 'tools' },
-      h('button', { class: 'icon-btn', title: 'Toggle side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
-      h('button', { class: 'icon-btn', title: 'Toggle terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('panel')),
-      h('button', { class: 'icon-btn', title: 'Toggle AI chat (Ctrl+Alt+B)', onclick: () => emit('cmd', 'toggle-chat') }, icon('sidebarRight')),
-      h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))),
-    // Last, so its no-drag area wins over the draggable spacer it sits on top of (otherwise the OS swallows the click).
-    omni);
+    h('div', { class: 'brand', title: 'Caret Agent' }, logo(22)),
+    h('button', { class: 'icon-btn', title: 'Side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
+    h('button', { class: 'icon-btn', title: 'Search conversations', onclick: () => searchChats() }, icon('search')),
+    h('div', { class: 'spacer' }));
 
   function folderMenu(anchor) {
     const recent = (state.settings.recentFolders || []).filter(d => d !== state.workspace?.root).slice(0, 8);
@@ -176,19 +171,20 @@ async function boot() {
   const accountMenu = () => menu(agModel, [
     { label: 'Settings', icon: 'settings', key: 'Ctrl+,', onClick: () => openSettings() },
     { label: 'Models and API keys', icon: 'key', key: 'Ctrl+Shift+X', onClick: () => providersPanel.openList() },
-    { label: 'Extensions', icon: 'extensions', onClick: () => extPanel.open() },
+    { label: 'Connectors', icon: 'extensions', onClick: () => extPanel.open() },
     'sep',
     { label: 'Log out', icon: 'x', onClick: async () => { await api.auth.signOut(); location.reload(); } }], { above: true });
+  const searchChats = () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } };
   $('sessions').append(
     h('div', { class: 'ag-nav' },
-      h('button', { class: 'ag-item strong', onclick: () => newTask() }, icon('compose'), h('span', { class: 'grow', text: 'New task' }), h('span', { class: 'ag-kbd', text: 'Ctrl T' })),
-      h('button', { class: 'ag-item', onclick: () => extPanel.open() }, icon('extensions'), h('span', { class: 'grow', text: 'Extensions' })),
-      h('button', { class: 'ag-item', onclick: () => { chatFilter.classList.toggle('hidden'); if (!chatFilter.classList.contains('hidden')) chatFilter.focus(); else { chatFilter.value = ''; paintChats(); } } }, icon('search'), h('span', { class: 'grow', text: 'Search chats' })),
+      h('button', { class: 'ag-new', onclick: () => newTask() }, icon('plus'), h('span', { class: 'grow', text: 'New Conversation' })),
+      h('button', { class: 'ag-item', onclick: () => extPanel.open() }, icon('extensions'), h('span', { class: 'grow', text: 'Connectors' })),
     ),
     h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Projects' }),
       h('button', { class: 'icon-btn', title: 'New project: choose a folder', onclick: () => emit('cmd', 'open-folder') }, icon('folderPlus'))),
     projList,
-    h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Chats' })),
+    h('div', { class: 'ag-label' }, h('span', { class: 'grow', text: 'Conversations' }),
+      h('button', { class: 'icon-btn', title: 'New conversation', onclick: () => newTask() }, icon('plus'))),
     chatFilter, sessionList,
     h('div', { class: 'ag-foot' }, agModel,
       h('button', { class: 'icon-btn', title: 'Settings (Ctrl+,)', onclick: () => openSettings() }, icon('settings'))));
@@ -202,11 +198,10 @@ async function boot() {
   let agTermBtn;
   const agFilesBtn = h('button', { class: 'ag-top-btn', title: 'Show files', onclick: () => emit('cmd', 'toggle-chat') }, icon('files'), h('span', { text: 'Files' }));
   const agTop = h('div', { class: 'ag-top' },
-    h('button', { class: 'icon-btn', title: 'Side bar (Ctrl+B)', onclick: () => emit('cmd', 'toggle-sidebar') }, icon('sidebar')),
     h('span', { class: 'grow' }),
     agFilesBtn,
     agTermBtn = h('button', { class: 'ag-top-btn', title: 'Terminal (Ctrl+`)', onclick: () => emit('cmd', 'toggle-bottom') }, icon('terminal'), h('span', { text: 'Terminal' })),
-    h('button', { class: 'ag-top-btn', title: 'Open the IDE', onclick: () => setLayout('studio') }, h('span', { text: 'IDE' }), icon('external')));
+    null);
   $('agent-center').append(agTop);
   if (!store.get('agFiles', false)) $('filespane').classList.add('hidden');
 
@@ -287,6 +282,7 @@ async function boot() {
 
   // ---------- layout switching ----------
   function setLayout(l) {
+    l = 'agent'; // the IDE is parked for now (backup/ide-ui); every path ends up in the Agent
     state.layout = l;
     document.body.classList.toggle('agent-layout', l === 'agent');
     $('studio').classList.toggle('hidden', l !== 'studio');
@@ -435,9 +431,9 @@ async function boot() {
   state.settings.account = await api.auth.account().catch(() => state.settings.account);
   if (!state.settings.account) { await loginGate(); location.reload(); return; }   // reload: chats are kept per account
 
-  if (!state.settings.onboarded) {
-    await onboarding();
-    setLayout(state.settings.layout);
+  // No questions after signing in: straight to the Agent. The GitHub name is the name.
+  if (!state.settings.onboarded || state.settings.layout !== 'agent') {
+    await saveSettings({ onboarded: true, layout: 'agent' }).catch(() => {});
     emit('settings', state.settings);
   }
 }

@@ -74,7 +74,7 @@ function createWindow() {
     title: 'Caret Agent',
     icon: path.join(APP_ROOT, 'resources', 'icon.png'),
     titleBarStyle: 'hidden',
-    ...(isMac ? { trafficLightPosition: { x: 14, y: 12 } } : { titleBarOverlay: { color: '#141414', symbolColor: '#a0a0a0', height: 36 } }),
+    ...(isMac ? { trafficLightPosition: { x: 14, y: 12 } } : { titleBarOverlay: { color: '#0e0c0a', symbolColor: '#a0a0a0', height: 36 } }),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),

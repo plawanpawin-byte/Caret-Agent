@@ -1,0 +1,85 @@
+/* Caret Agent: the desktop-agent look. Near-black, warm greys, one blue accent, rounded panels.
+   Loaded after styles.css, so these values win. The IDE look lives in styles.css and the backup/ide-ui branch. */
+:root {
+  --bg: #040200;
+  --panel: #0e0c0a;
+  --bar: #0e0c0a;
+  --surface: #12100e;
+  --surface-2: #1c1a17;
+  --hover: rgba(255, 255, 255, 0.05);
+  --border: #1b1917;
+  --border-strong: #2a2723;
+  --guide: #1f1d1a;
+  --text: #b8b5af;
+  --text-hi: #ecebe8;
+  --muted: #7d7a74;
+  --faint: #55534f;
+  --accent: #2b8fe0;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(43, 143, 224, 0.14);
+  --sel: rgba(255, 255, 255, 0.07);
+  --radius: 6px;
+  --radius-lg: 12px;
+  --titlebar: 44px;
+}
+html, body, #root { background: var(--panel); }
+.statusbar { display: none; }
+.titlebar { background: var(--panel); border-bottom: 0; gap: 4px; padding-left: 14px; }
+.titlebar .brand { margin-right: 6px; display: grid; place-items: center; }
+.titlebar .icon-btn { -webkit-app-region: no-drag; width: 28px; height: 28px; }
+.titlebar .icon-btn svg { width: 16px; height: 16px; }
+
+/* ----- side bar ----- */
+.sessions { width: 258px; background: var(--panel); border-right: 0; padding: 4px 8px 10px; }
+.ag-new { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: #1a1815; color: var(--text-hi); text-align: left; margin-bottom: 8px; }
+.ag-new:hover { background: #221f1b; }
+.ag-new svg.i { color: var(--muted); }
+.ag-new .grow { flex: 1; }
+.ag-item { height: 34px; border-radius: 8px; color: var(--text); }
+.ag-label { margin-top: 18px; height: 28px; padding: 0 6px 0 8px; font-size: 12px; font-weight: 500; letter-spacing: .01em; color: var(--muted); }
+.ag-label .icon-btn { opacity: 1; }
+.ag-chat { height: 34px; border-radius: 8px; color: var(--text); }
+.ag-chat .ag-time { color: var(--faint); font-size: 12px; }
+.ag-chat.nested, .ag-empty.nested { padding-left: 28px; }
+.ag-empty { color: var(--faint); padding-left: 10px; }
+.ag-foot { border-top: 0; }
+
+/* ----- the main panel: a rounded black card on the side bar colour ----- */
+.agent-center { background: var(--bg); border-radius: 14px; margin: 0 8px 8px 0; overflow: hidden; }
+.ag-top { background: transparent; border-bottom: 0; }
+
+/* ----- empty conversation ----- */
+.welcome { display: block; padding: 0; }
+.welcome-inner { width: 100%; height: 100%; display: flex; flex-direction: column; }
+.ag-hello { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; padding-bottom: 4vh; }
+.ag-hello .logo { width: 200px; height: 200px; }
+.welcome h1 { margin: 0; font-size: 26px; font-weight: 300; letter-spacing: -.01em; color: #cfccc6; }
+.welcome .suggest { display: none; }
+.welcome .composer-wrap { width: min(780px, calc(100% - 48px)); margin: 0 auto 26px; padding: 0; }
+.cmp-proj { background: #080605; padding: 9px 12px 7px; border-bottom: 1px solid #161412; }
+.cmp-proj .ctx-chip { border: 0; background: transparent; padding: 0 2px; height: 22px; color: var(--muted); }
+.cmp-proj .ctx-chip:hover { color: var(--text-hi); }
+
+/* ----- prompt box ----- */
+.composer { background: #12100e; border: 1px solid #1d1b18; border-radius: 18px; overflow: hidden; }
+.composer:focus-within { border-color: #34312c; }
+.composer textarea { background: transparent; color: var(--text-hi); padding: 13px 16px 4px; }
+.composer textarea::placeholder { color: #6b6964; }
+.composer-row { padding: 4px 10px 10px 10px; }
+.send { width: 32px; height: 32px; border-radius: 50%; background: #e9e7e2; color: #0b0a09; }
+.send:hover { background: #fff; }
+.send:disabled { background: #1f1d1a; color: #5a5853; }
+.send.stop { border-radius: 50%; }
+.pill { color: var(--muted); }
+.pill:hover { color: var(--text-hi); }
+
+/* ----- login and dialogs ----- */
+.overlay:has(.login) { background: #000; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.modal { background: #0e0c0a; border-color: #23201d; }
+
+/* quiet scrollbars */
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); }
+.agent-center .transcript, .agent-center .welcome { scrollbar-width: thin; }
+.agent-center ::-webkit-scrollbar { width: 10px; }
+.agent-center ::-webkit-scrollbar-track { background: transparent; }
